@@ -1,0 +1,73 @@
+@import "tailwindcss";
+@import "leaflet/dist/leaflet.css";
+
+@theme inline {
+  --color-gold: #D4AF37;
+  --color-gold-dark: #B8962F;
+  --color-gold-light: #E8C84A;
+  --color-dark: #0B0B0C;
+  --color-dark-card: #1A1A1A;
+  --color-dark-border: #2A2A2A;
+  --font-sans: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+}
+
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+html, body {
+  background: #0B0B0C;
+  color: #FFFFFF;
+  font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  overflow-x: hidden;
+}
+
+body {
+  display: flex;
+  justify-content: center;
+  align-items: flex-start;
+  min-height: 100vh;
+}
+
+@keyframes scroll-text {
+  0% { transform: translateX(100%); }
+  100% { transform: translateX(-100%); }
+}
+
+.animate-scroll {
+  animation: scroll-text 25s linear infinite;
+}
+
+@keyframes pulse-glow {
+  0%, 100% { opacity: 1; filter: drop-shadow(0 0 4px #D4AF37); }
+  50% { opacity: 0.6; filter: drop-shadow(0 0 12px #D4AF37); }
+}
+
+.animate-pulse-glow {
+  animation: pulse-glow 2s ease-in-out infinite;
+}
+
+@keyframes sosPulse {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(220,38,38,0.6); }
+  50% { box-shadow: 0 0 0 16px rgba(220,38,38,0); }
+}
+
+@keyframes fadeInUp {
+  from { opacity: 0; transform: translateY(20px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.animate-fade-in-up {
+  animation: fadeInUp 0.5s ease-out forwards;
+}
+
+::-webkit-scrollbar {
+  width: 0;
+  height: 0;
+}
+
+input, select, textarea, button {
+  font-family: inherit;
+}

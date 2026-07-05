@@ -1,0 +1,32 @@
+{
+  "name": "mr-lexars-border-cross-boarder",
+  "version": "2.0.0",
+  "description": "MR Lexars Cross Border Transportation - SA ↔ Botswana ↔ Zimbabwe",
+  "private": true,
+  "scripts": {
+    "cap:android": "npx cap copy android && npx cap open android",
+    "cap:ios": "npx cap copy ios && npx cap open ios",
+    "cap:sync": "npx cap sync",
+    "cap:copy": "npx cap copy",
+    "copy:www": "cp index.html logo.svg manifest.json sw.js www/",
+    "build": "npm run copy:www && npx cap sync"
+  },
+  "keywords": [
+    "transportation",
+    "cross-border",
+    "taxi",
+    "parcel"
+  ],
+  "author": "MR Lexars",
+  "license": "ISC",
+  "dependencies": {
+    "@capacitor/android": "^8.4.1",
+    "@capacitor/cli": "^8.4.1",
+    "@capacitor/core": "^8.4.1",
+    "@capacitor/geolocation": "^8.2.0",
+    "@capacitor/ios": "^8.4.1"
+  },
+  "devDependencies": {
+    "typescript": "^6.0.3"
+  }
+}

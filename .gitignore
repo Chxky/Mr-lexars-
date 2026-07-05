@@ -1,0 +1,15 @@
+node_modules/
+backend/node_modules/
+backend/mr-lexar.db
+android/.gradle/
+android/build/
+android/app/build/
+android/app/release/
+*.keystore
+*.key
+.env
+.DS_Store
+Thumbs.db
+*.log
+.vscode/
+.idea/

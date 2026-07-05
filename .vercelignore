@@ -1,0 +1,8 @@
+backend/
+android/
+ios/
+node_modules/
+mr-lexar-app/
+.git/
+.vscode/
+*.log

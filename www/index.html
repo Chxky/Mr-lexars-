@@ -1,0 +1,2465 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self' 'unsafe-inline' 'unsafe-eval' https:; img-src 'self' https: data: blob:; connect-src 'self' https:; font-src 'self' data:;">
+<meta http-equiv="X-Content-Type-Options" content="nosniff">
+<meta http-equiv="X-Frame-Options" content="DENY">
+<meta http-equiv="Strict-Transport-Security" content="max-age=31536000; includeSubDomains">
+<meta name="referrer" content="strict-origin-when-cross-origin">
+<title>MR Lexars - Cross Border Transportation</title>
+<link rel="icon" type="image/svg+xml" href="logo.svg">
+<link rel="apple-touch-icon" href="logo.svg">
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#0B0B0C">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="MR Lexars">
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" crossorigin="" />
+<style>
+*, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+:root {
+  --gold: #D4AF37;
+  --gold-dark: #B8962F;
+  --gold-light: #E8C84A;
+  --dark: #0B0B0C;
+  --card: #1A1A1A;
+  --border: #2A2A2A;
+  --text: #FFFFFF;
+  --text-dim: rgba(255,255,255,0.5);
+}
+html, body {
+  height: 100%;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  background: var(--dark);
+  color: var(--text);
+  overflow: hidden;
+}
+body {
+  display: flex;
+  justify-content: center;
+  align-items: flex-start;
+}
+#app {
+  width: 100%;
+  max-width: 430px;
+  min-height: 100vh;
+  background: var(--dark);
+  position: relative;
+  overflow: hidden;
+}
+.screen {
+  display: none;
+  flex-direction: column;
+  height: 100vh;
+  padding-bottom: 72px;
+  animation: fadeSlideIn 0.35s ease-out;
+  overflow: hidden;
+}
+.screen.active { display: flex; }
+.screen.map-screen { padding-bottom: 0; }
+@keyframes fadeSlideIn {
+  from { opacity: 0; transform: translateX(40px); }
+  to { opacity: 1; transform: translateX(0); }
+}
+@keyframes scrollText {
+  0% { transform: translateX(100%); }
+  100% { transform: translateX(-100%); }
+}
+@keyframes pulseGlow {
+  0%, 100% { opacity: 1; filter: drop-shadow(0 0 4px var(--gold)); }
+  50% { opacity: 0.6; filter: drop-shadow(0 0 12px var(--gold)); }
+}
+@keyframes pulse { 0%,100% { opacity: 1; } 50% { opacity: 0.4; } }
+@keyframes fadeUp {
+  from { opacity: 0; transform: translateY(15px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+@keyframes ping {
+  0% { transform: scale(1); opacity: 0.8; }
+  100% { transform: scale(2); opacity: 0; }
+}
+
+/* Bottom Tab Bar */
+.tab-bar {
+  position: fixed;
+  bottom: 0;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 100%;
+  max-width: 430px;
+  height: 72px;
+  background: var(--card);
+  border-top: 1px solid var(--border);
+  display: flex;
+  justify-content: space-around;
+  align-items: center;
+  z-index: 100;
+}
+.tab-btn {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
+  width: 64px;
+  height: 100%;
+  background: none;
+  border: none;
+  cursor: pointer;
+  position: relative;
+}
+.tab-btn svg { width: 22px; height: 22px; }
+.tab-btn span { font-size: 10px; line-height: 1; }
+.tab-btn.active svg, .tab-btn.active span { color: var(--gold); fill: var(--gold); }
+.tab-btn.active span { font-weight: 600; }
+.tab-btn:not(.active) svg, .tab-btn:not(.active) span { color: #71717a; fill: #71717a; }
+.tab-indicator {
+  position: absolute;
+  top: -1px;
+  width: 32px;
+  height: 2px;
+  background: var(--gold);
+  border-radius: 2px;
+  transition: left 0.25s ease;
+}
+/* Nav bar flash fix - tabs tuck under */
+.content { padding-bottom: 0; }
+
+/* Common components */
+.btn-gold {
+  display: flex;
+  width: 100%;
+  padding: 14px 20px;
+  justify-content: center;
+  align-items: center;
+  border-radius: 16px;
+  background: var(--gold);
+  color: #000;
+  font-size: 16px;
+  font-weight: 700;
+  border: none;
+  cursor: pointer;
+  transition: all 0.2s;
+  box-shadow: 0 4px 20px rgba(212,175,55,0.2);
+}
+.btn-gold:disabled { opacity: 0.3; cursor: not-allowed; }
+.btn-gold:active:not(:disabled) { transform: scale(0.97); }
+.btn-whatsapp {
+  display: flex;
+  width: 100%;
+  padding: 14px 20px;
+  justify-content: center;
+  align-items: center;
+  border-radius: 16px;
+  background: #25D366;
+  color: #fff;
+  font-size: 14px;
+  font-weight: 700;
+  border: none;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+.btn-whatsapp:active { transform: scale(0.97); }
+.btn-outline-gold {
+  display: flex;
+  width: 100%;
+  padding: 14px 20px;
+  justify-content: center;
+  align-items: center;
+  border-radius: 16px;
+  background: transparent;
+  color: var(--gold);
+  font-size: 14px;
+  font-weight: 600;
+  border: 1px solid var(--gold);
+  cursor: pointer;
+  transition: all 0.2s;
+}
+.card-gold {
+  background: var(--card);
+  border: 1px solid rgba(212,175,55,0.3);
+  border-radius: 16px;
+}
+.card {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 16px;
+}
+.input {
+  width: 100%;
+  padding: 14px;
+  border-radius: 12px;
+  background: var(--dark);
+  border: 1px solid var(--border);
+  color: #fff;
+  font-size: 14px;
+  outline: none;
+  transition: border 0.2s;
+}
+.input:focus { border-color: var(--gold); }
+.input::placeholder { color: rgba(255,255,255,0.3); }
+input[type="date"]::-webkit-calendar-picker-indicator { filter: invert(0.7); }
+
+/* Status Ticker */
+.ticker {
+  width: 100%;
+  overflow: hidden;
+  background: var(--card);
+  border-top: 1px solid var(--border);
+  border-bottom: 1px solid var(--border);
+  padding: 10px 0;
+}
+.ticker-inner {
+  display: flex;
+  white-space: nowrap;
+  animation: scrollText 25s linear infinite;
+  gap: 48px;
+}
+.ticker-item {
+  font-size: 12px;
+  color: var(--gold-light);
+  opacity: 0.8;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.ticker-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  display: inline-block;
+  animation: pulse 1.5s ease-in-out infinite;
+}
+.ticker-dot.green { background: #4ade80; }
+.ticker-dot.yellow { background: #facc15; }
+.ticker-dot.blue { background: #60a5fa; }
+
+/* Home Screen */
+.hero { padding: 48px 24px 24px; text-align: center; }
+.hero h1 { font-size: 36px; font-weight: 800; color: var(--gold); letter-spacing: 0.5px; }
+.hero p { font-size: 13px; color: var(--text-dim); margin-top: 4px; letter-spacing: 2px; text-transform: uppercase; }
+.hero-line { width: 64px; height: 2px; background: rgba(212,175,55,0.5); margin: 12px auto 0; }
+.home-cards { padding: 0 16px; display: flex; flex-direction: column; gap: 14px; }
+.home-card {
+  width: 100%;
+  text-align: left;
+  background: none;
+  border: none;
+  cursor: pointer;
+  animation: fadeUp 0.5s ease-out forwards;
+  opacity: 0;
+}
+.home-card:nth-child(1) { animation-delay: 0.3s; }
+.home-card:nth-child(2) { animation-delay: 0.45s; }
+.home-card:nth-child(3) { animation-delay: 0.6s; }
+.home-card-inner {
+  position: relative;
+  overflow: hidden;
+  border-radius: 16px;
+  background: var(--card);
+  border: 1px solid var(--border);
+  padding: 20px;
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  transition: all 0.2s;
+}
+.home-card-inner:active { transform: scale(0.98); }
+.card-icon {
+  width: 48px; height: 48px;
+  border-radius: 12px;
+  background: rgba(212,175,55,0.1);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+.card-icon svg { width: 24px; height: 24px; color: var(--gold); }
+.card-text { flex: 1; min-width: 0; }
+.card-text h3 { font-size: 15px; font-weight: 600; color: #fff; }
+.card-text p { font-size: 12px; color: var(--text-dim); margin-top: 2px; }
+.card-arrow { color: var(--gold); flex-shrink: 0; }
+
+.route-mini {
+  padding: 0 16px;
+  margin-top: 20px;
+  margin-bottom: 24px;
+}
+.route-mini-inner {
+  border-radius: 16px;
+  background: var(--card);
+  border: 1px solid var(--border);
+  padding: 16px;
+}
+.route-mini h4 { font-size: 11px; font-weight: 600; color: var(--gold); text-transform: uppercase; letter-spacing: 1px; margin-bottom: 12px; }
+.route-bar { display: flex; align-items: center; justify-content: space-between; font-size: 11px; color: rgba(255,255,255,0.6); }
+.route-line { flex: 1; margin: 0 8px; height: 1px; background: linear-gradient(90deg, rgba(212,175,55,0.4), rgba(212,175,55,0.1), rgba(212,175,55,0.4)); }
+.route-footer { margin-top: 12px; display: flex; align-items: center; justify-content: center; gap: 4px; font-size: 11px; color: rgba(232,200,74,0.6); }
+
+/* Book Seat Screen */
+.screen-header { padding: 16px 16px 8px; }
+.screen-header h2 { font-size: 20px; font-weight: 700; color: var(--gold); }
+.screen-header p { font-size: 12px; color: var(--text-dim); margin-top: 2px; }
+.route-scroll { overflow-x: auto; padding: 0 16px 8px; -webkit-overflow-scrolling: touch; }
+.route-scroll::-webkit-scrollbar { display: none; }
+.route-scroll-inner { display: flex; gap: 8px; min-width: min-content; }
+.pill {
+  flex-shrink: 0;
+  padding: 8px 16px;
+  border-radius: 999px;
+  font-size: 13px;
+  font-weight: 500;
+  border: 1px solid var(--border);
+  background: transparent;
+  color: rgba(255,255,255,0.6);
+  cursor: pointer;
+  transition: all 0.2s;
+  position: relative;
+}
+.pill:active { transform: scale(0.95); }
+.pill.pickup {
+  background: var(--gold);
+  color: #000;
+  border-color: var(--gold);
+  box-shadow: 0 4px 16px rgba(212,175,55,0.2);
+}
+.pill.dropoff {
+  border-color: var(--gold);
+  color: var(--gold);
+  background: transparent;
+}
+.pill:disabled { opacity: 0.3; cursor: not-allowed; }
+.pill-badge {
+  position: absolute;
+  top: -6px;
+  right: -6px;
+  width: 14px; height: 14px;
+  background: var(--gold);
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 7px;
+  font-weight: bold;
+  color: #000;
+}
+.route-arrow { display: flex; align-items: center; justify-content: center; gap: 8px; margin: 8px 0; font-size: 13px; }
+
+.trip-summary {
+  margin: 12px 16px 0;
+  padding: 16px;
+  border-radius: 16px;
+  background: linear-gradient(135deg, rgba(212,175,55,0.1), var(--card));
+  border: 1px solid rgba(212,175,55,0.3);
+}
+.trip-summary .row { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; }
+.trip-summary h3 { font-size: 15px; font-weight: 600; color: var(--gold); }
+.trip-summary .price { font-size: 18px; font-weight: 700; color: var(--gold); }
+.trip-summary .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; font-size: 13px; }
+.trip-summary .grid .label { color: var(--text-dim); font-size: 11px; }
+.trip-summary .grid .value { color: #fff; font-weight: 500; }
+
+.form-section { padding: 12px 16px 0; display: flex; flex-direction: column; gap: 12px; }
+
+.collapsible { margin: 12px 16px 0; }
+.collapsible-btn {
+  width: 100%;
+  padding: 12px 16px;
+  border-radius: 12px;
+  background: var(--card);
+  border: 1px solid var(--border);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  color: var(--gold);
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+}
+.collapsible-btn:active { transform: scale(0.98); }
+.collapsible-body { overflow: hidden; max-height: 0; transition: max-height 0.3s ease; }
+.collapsible-body.open { max-height: 200px; }
+.collapsible-body-inner { padding: 12px 4px; display: flex; flex-direction: column; gap: 8px; }
+.check-item { display: flex; align-items: center; gap: 8px; font-size: 12px; color: var(--text-dim); }
+.check-item svg { flex-shrink: 0; }
+
+/* Modal */
+.modal-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 200;
+  background: rgba(0,0,0,0.8);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0 16px;
+  animation: fadeUp 0.2s ease-out;
+}
+.modal {
+  width: 100%;
+  max-width: 360px;
+  background: var(--card);
+  border: 1px solid rgba(212,175,55,0.3);
+  border-radius: 24px;
+  padding: 24px;
+  position: relative;
+  animation: fadeUp 0.3s ease-out;
+}
+.modal-close {
+  position: absolute;
+  top: 16px;
+  right: 16px;
+  background: none;
+  border: none;
+  color: rgba(255,255,255,0.4);
+  cursor: pointer;
+  font-size: 18px;
+}
+.modal-icon {
+  width: 64px; height: 64px;
+  border-radius: 50%;
+  background: rgba(212,175,55,0.15);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin: 0 auto 16px;
+}
+.modal-icon svg { width: 32px; height: 32px; color: var(--gold); }
+.modal h3 { font-size: 18px; font-weight: 700; color: var(--gold); text-align: center; margin-bottom: 4px; }
+.modal .sub { font-size: 12px; color: var(--text-dim); text-align: center; margin-bottom: 20px; }
+
+/* Ticket */
+.ticket {
+  background: var(--dark);
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  padding: 16px;
+  margin-bottom: 16px;
+}
+.qr-placeholder {
+  width: 96px; height: 96px;
+  margin: 0 auto 12px;
+  background: rgba(255,255,255,0.03);
+  border-radius: 12px;
+  border: 1px dashed rgba(255,255,255,0.1);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.ticket-row { display: flex; justify-content: space-between; font-size: 13px; padding: 3px 0; }
+.ticket-row .lbl { color: var(--text-dim); }
+.ticket-row .val { color: #fff; font-weight: 500; }
+
+/* Parcel screen */
+.toggle-group { display: flex; gap: 6px; }
+.toggle-btn {
+  padding: 6px 14px;
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 500;
+  border: none;
+  cursor: pointer;
+  transition: all 0.2s;
+  background: var(--border);
+  color: var(--text-dim);
+}
+.toggle-btn.active { background: var(--gold); color: #000; }
+.customs-box { margin: 0 16px; }
+.customs-box-inner {
+  padding: 16px;
+  border-radius: 16px;
+  border: 1px solid rgba(212,175,55,0.2);
+  background: var(--card);
+}
+.customs-header { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; }
+.customs-header svg { color: var(--gold); }
+.customs-header h3 { font-size: 13px; font-weight: 600; color: var(--gold); }
+.customs-text { font-size: 11px; color: var(--text-dim); line-height: 1.6; white-space: pre-wrap; }
+
+/* Live Map */
+.map-container {
+  flex: 1;
+  margin: 0 12px 12px;
+  border-radius: 16px;
+  overflow: hidden;
+  border: 1px solid var(--border);
+  background: linear-gradient(180deg, #0a0e17, #111827);
+  position: relative;
+}
+.map-container { flex: 1; display: flex; flex-direction: column; position: relative; }
+.map-container #leaflet-map { flex: 1; width: 100%; min-height: 300px; z-index: 1; }
+.leaflet-popup-content-wrapper { background: var(--card) !important; color: #fff !important; border: 1px solid var(--gold) !important; border-radius: 12px !important; }
+.leaflet-popup-tip { background: var(--card) !important; border: 1px solid var(--gold) !important; }
+.leaflet-popup-content { margin: 12px 16px !important; font-family: inherit !important; }
+.leaflet-control-zoom a { background: var(--card) !important; color: var(--gold) !important; border-color: var(--border) !important; }
+.leaflet-container { font-family: inherit !important; }
+.map-header { padding: 16px 16px 8px; display: flex; justify-content: space-between; align-items: flex-start; }
+.map-live { display: flex; align-items: center; gap: 6px; font-size: 11px; color: #4ade80; background: rgba(74,222,128,0.1); padding: 6px 14px; border-radius: 999px; }
+.map-live .dot { width: 6px; height: 6px; border-radius: 50%; background: #4ade80; animation: ping 1.5s ease-out infinite; }
+
+.vehicle-popup {
+  position: absolute;
+  bottom: 12px;
+  left: 12px;
+  right: 12px;
+  background: var(--card);
+  border: 1px solid rgba(212,175,55,0.3);
+  border-radius: 16px;
+  padding: 16px;
+  z-index: 10;
+  animation: fadeUp 0.25s ease-out;
+}
+.vehicle-popup .close {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  background: none;
+  border: none;
+  color: rgba(255,255,255,0.3);
+  cursor: pointer;
+  font-size: 14px;
+}
+.vehicle-popup .v-row { display: flex; align-items: center; gap: 12px; margin-bottom: 12px; }
+.vehicle-popup .v-avatar {
+  width: 40px; height: 40px;
+  border-radius: 50%;
+  background: rgba(212,175,55,0.15);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.vehicle-popup .v-avatar svg { width: 20px; height: 20px; color: var(--gold); }
+.vehicle-popup .v-name { font-size: 14px; font-weight: 600; color: #fff; }
+.vehicle-popup .v-status { font-size: 11px; color: #4ade80; display: flex; align-items: center; gap: 4px; }
+.vehicle-popup .v-status .dot { width: 6px; height: 6px; border-radius: 50%; background: #4ade80; animation: pulse 1.5s infinite; }
+.vehicle-popup .v-stats { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px; font-size: 11px; }
+.vehicle-popup .v-stat { background: var(--dark); border-radius: 12px; padding: 10px 8px; text-align: center; }
+.vehicle-popup .v-stat .lbl { color: var(--text-dim); display: block; margin-bottom: 2px; }
+.vehicle-popup .v-stat .val { color: var(--gold); font-weight: 600; }
+.driver-toggle {
+  background: rgba(212,175,55,0.1);
+  border: 1px solid rgba(212,175,55,0.3);
+  border-radius: 50%;
+  width: 36px;
+  height: 36px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  color: var(--gold);
+  transition: all 0.2s;
+}
+.driver-toggle:hover { background: rgba(212,175,55,0.2); }
+.driver-toggle.active { background: #25D366; border-color: #25D366; color: #fff; }
+#driver-panel {
+  position: absolute;
+  top: 50%;
+  left: 12px;
+  right: 12px;
+  max-width: 340px;
+  margin: 0 auto;
+  background: var(--card);
+  border: 1px solid rgba(212,175,55,0.3);
+  border-radius: 16px;
+  padding: 20px;
+  z-index: 20;
+  transform: translateY(-50%);
+  animation: fadeUp 0.25s ease-out;
+  box-shadow: 0 8px 32px rgba(0,0,0,0.5);
+}
+.driver-panel-close {
+  position: absolute;
+  top: 10px;
+  right: 14px;
+  background: none;
+  border: none;
+  color: rgba(255,255,255,0.4);
+  font-size: 20px;
+  cursor: pointer;
+}
+
+/* === POLICE AHEAD FEATURE === */
+.fab-report {
+  position: absolute; bottom: 16px; right: 16px; z-index: 20;
+  width: 52px; height: 52px; border-radius: 50%;
+  background: var(--gold); border: none; cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+  box-shadow: 0 4px 20px rgba(212,175,55,0.4);
+  transition: transform 0.2s;
+}
+.fab-report:active { transform: scale(0.9); }
+.fab-report svg { width: 24px; height: 24px; color: #000; }
+
+.report-card {
+  position: absolute; bottom: 80px; right: 16px; left: 16px; z-index: 25;
+  background: var(--card); border: 1px solid var(--gold); border-radius: 16px;
+  padding: 16px; animation: fadeUp 0.25s ease-out;
+}
+.report-card h4 { font-size: 14px; font-weight: 600; color: var(--gold); margin-bottom: 12px; }
+.report-card label { font-size: 11px; color: var(--text-dim); display: block; margin-bottom: 4px; }
+.report-card select {
+  width: 100%; padding: 10px; border-radius: 10px; background: var(--dark);
+  border: 1px solid var(--border); color: #fff; font-size: 13px; outline: none; margin-bottom: 12px;
+}
+.report-card select:focus { border-color: var(--gold); }
+.report-card .btn-row { display: flex; gap: 8px; }
+
+.alert-banner {
+  position: absolute; top: 0; left: 0; right: 0; z-index: 30;
+  background: linear-gradient(135deg, #8B0000, #5C0000);
+  border-bottom: 2px solid var(--gold); padding: 10px 16px; cursor: pointer;
+  animation: slideDown 0.4s ease-out;
+}
+@keyframes slideDown { from { transform: translateY(-100%); } to { transform: translateY(0); } }
+.alert-banner .alert-title { font-size: 13px; font-weight: 700; color: var(--gold); display: flex; align-items: center; gap: 6px; }
+.alert-banner .alert-sub { font-size: 11px; color: #ffcccc; margin-top: 2px; }
+
+.checklist-panel {
+  position: absolute; top: 0; left: 0; right: 0; bottom: 0; z-index: 35;
+  background: rgba(11,11,12,0.95); backdrop-filter: blur(8px); padding: 20px 16px;
+  overflow-y: auto; animation: fadeUp 0.3s ease-out;
+}
+.checklist-panel h3 { font-size: 16px; font-weight: 700; color: var(--gold); margin-bottom: 4px; }
+.checklist-panel .loc { font-size: 11px; color: var(--text-dim); margin-bottom: 16px; }
+.progress-bar {
+  width: 100%; height: 6px; background: var(--border); border-radius: 3px; margin-bottom: 16px; overflow: hidden;
+}
+.progress-bar .fill {
+  height: 100%; background: linear-gradient(90deg, var(--gold), var(--gold-light));
+  border-radius: 3px; transition: width 0.4s ease;
+}
+.check-item {
+  display: flex; align-items: center; gap: 10px; padding: 10px 0; border-bottom: 1px solid var(--border); cursor: pointer;
+}
+.check-item:last-child { border-bottom: none; }
+.check-item .box {
+  width: 20px; height: 20px; border-radius: 4px; border: 2px solid var(--gold);
+  display: flex; align-items: center; justify-content: center; flex-shrink: 0;
+  transition: all 0.2s;
+}
+.check-item .box.checked { background: var(--gold); }
+.check-item .box svg { width: 12px; height: 12px; color: #000; display: none; }
+.check-item .box.checked svg { display: block; }
+.check-item .label { font-size: 12px; color: #fff; flex: 1; }
+.check-item .label.done { color: var(--gold-light); text-decoration: line-through; opacity: 0.6; }
+.checklist-ready {
+  text-align: center; padding: 14px; border-radius: 12px;
+  background: rgba(74,222,128,0.1); border: 1px solid #4ade80; margin-top: 12px;
+  font-size: 13px; font-weight: 600; color: #4ade80;
+}
+
+/* Scrollable content areas */
+.scroll-content {
+  flex: 1;
+  overflow-y: auto;
+  overflow-x: hidden;
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior: contain;
+  scroll-behavior: smooth;
+}
+.scroll-content::-webkit-scrollbar { width: 3px; }
+.scroll-content::-webkit-scrollbar-track { background: transparent; }
+.scroll-content::-webkit-scrollbar-thumb { background: var(--gold); border-radius: 4px; }
+
+/* Lucide replacement SVGs */
+.icon { display: inline-block; vertical-align: middle; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+
+/* Track ID display */
+.track-display { text-align: center; padding: 20px 16px; }
+.track-display .ttl { font-size: 11px; color: var(--text-dim); }
+.track-display .id { font-size: 22px; font-weight: 700; color: var(--gold); letter-spacing: 2px; margin-top: 4px; }
+
+/* Security badge */
+.sec-badge {
+  display: flex; align-items: center; justify-content: center; gap: 6px;
+  font-size: 10px; color: rgba(255,255,255,0.35); padding: 12px 16px; text-align: center;
+}
+.sec-badge svg { width: 12px; height: 12px; }
+.sec-badge a { color: var(--gold); text-decoration: none; }
+
+/* Privacy modal */
+.privacy-box {
+  background: var(--dark); border-radius: 12px; padding: 12px; margin-bottom: 12px;
+  font-size: 11px; color: var(--text-dim); line-height: 1.6;
+}
+.privacy-box strong { color: var(--gold); }
+
+/* === FEATURE 1: DRIVER PROFILE === */
+.driver-grid { display: flex; flex-direction: column; gap: 8px; }
+.driver-card { display: flex; align-items: center; gap: 12px; padding: 12px; border-radius: 14px; border: 1px solid rgba(212,175,55,0.15); background: var(--card); cursor: pointer; transition: all 0.15s; }
+.driver-card:active { transform: scale(0.98); background: rgba(212,175,55,0.05); }
+.driver-avatar { width: 44px; height: 44px; border-radius: 50%; background: linear-gradient(135deg, rgba(212,175,55,0.3), rgba(212,175,55,0.1)); border: 2px solid rgba(212,175,55,0.4); display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+.driver-info { flex: 1; min-width: 0; }
+.driver-name { font-size: 13px; font-weight: 600; color: #fff; }
+.driver-rating { font-size: 11px; color: var(--gold); margin-top: 1px; }
+.badge { display: inline-flex; align-items: center; gap: 3px; font-size: 9px; color: #4ade80; background: rgba(74,222,128,0.1); padding: 2px 8px; border-radius: 999px; }
+.badge svg { width: 10px; height: 10px; }
+
+/* === FEATURE 2: FAMILY TRACKING === */
+.fam-card { margin-top: 12px; padding: 16px; border-radius: 16px; background: var(--dark); border: 1px solid var(--border); }
+.fam-toggle { display: flex; align-items: center; justify-content: space-between; cursor: pointer; }
+.fam-toggle .track { width: 40px; height: 20px; border-radius: 10px; background: var(--border); position: relative; transition: background 0.2s; }
+.fam-toggle .track.on { background: var(--gold); }
+.fam-toggle .track .thumb { width: 16px; height: 16px; border-radius: 50%; background: #fff; position: absolute; top: 2px; left: 2px; transition: transform 0.2s; }
+.fam-toggle .track.on .thumb { transform: translateX(20px); }
+.fam-sent { padding: 12px; border-radius: 12px; background: rgba(74,222,128,0.1); border: 1px solid rgba(74,222,128,0.3); font-size: 11px; color: #4ade80; }
+
+/* === FEATURE 3: SOS === */
+.sos-btn { position: fixed; bottom: 88px; left: 16px; z-index: 65; display: flex; flex-direction: column; align-items: center; gap: 4px; }
+.sos-btn .circle { width: 52px; height: 52px; border-radius: 50%; background: #dc2626; display: flex; align-items: center; justify-content: center; box-shadow: 0 4px 20px rgba(220,38,38,0.4); animation: sosPulse 2s ease-in-out infinite; cursor: pointer; }
+.sos-btn .circle.active { background: #991b1b; border: 2px solid #fca5a5; animation: none; }
+.sos-btn .label { font-size: 9px; font-weight: 700; color: #dc2626; }
+@keyframes sosPulse { 0%,100% { box-shadow: 0 0 0 0 rgba(220,38,38,0.6); } 50% { box-shadow: 0 0 0 18px rgba(220,38,38,0); } }
+.sos-overlay { position: fixed; inset: 0; z-index: 70; background: rgba(0,0,0,0.85); display: flex; align-items: center; justify-content: center; padding: 24px; }
+.sos-card { width: 100%; max-width: 360px; background: var(--card); border: 2px solid rgba(220,38,38,0.5); border-radius: 24px; padding: 24px; }
+.sos-card.done { border-color: rgba(74,222,128,0.4); }
+.sos-card h3 { font-size: 18px; font-weight: 700; margin-bottom: 8px; }
+.sos-card .sub { font-size: 12px; color: var(--text-dim); margin-bottom: 16px; }
+.sos-step { display: flex; align-items: center; gap: 10px; padding: 6px 0; font-size: 12px; color: rgba(255,255,255,0.7); }
+.sos-step .check { width: 20px; height: 20px; border-radius: 50%; background: rgba(74,222,128,0.2); display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+.sos-step .check svg { width: 12px; height: 12px; color: #4ade80; }
+.police-list { padding: 12px; border-radius: 12px; background: var(--dark); border: 1px solid var(--border); margin: 12px 0; font-size: 12px; }
+.police-list .row { display: flex; justify-content: space-between; padding: 4px 0; }
+
+/* === FEATURE 4: CHAIN OF CUSTODY === */
+.timeline { position: relative; padding-left: 20px; }
+.timeline::before { content: ''; position: absolute; left: 7px; top: 8px; bottom: 8px; width: 2px; background: var(--border); }
+.tl-step { position: relative; padding: 0 0 14px 20px; cursor: pointer; }
+.tl-step:last-child { padding-bottom: 0; }
+.tl-step .dot { position: absolute; left: -15px; top: 5px; width: 10px; height: 10px; border-radius: 50%; border: 2px solid var(--dark-card); }
+.tl-step .dot.green { background: #4ade80; }
+.tl-step .dot.yellow { background: #eab308; }
+.tl-step .dot.grey { background: var(--border); }
+.tl-step .time-label { font-size: 11px; font-weight: 500; }
+.tl-step .time-label.done { color: rgba(255,255,255,0.7); }
+.tl-step .time-label.active { color: #fff; }
+.tl-step .time-label.pending { color: rgba(255,255,255,0.25); }
+.tl-detail { font-size: 10px; color: rgba(255,255,255,0.35); margin-top: 4px; line-height: 1.5; }
+
+/* === FEATURE 5: LOYALTY & REFERRAL === */
+.rewards-card { padding: 16px; border-radius: 16px; border: 1px solid rgba(212,175,55,0.2); background: var(--card); margin-bottom: 12px; }
+.rewards-card h3 { font-size: 13px; font-weight: 700; color: var(--gold); margin-bottom: 10px; display: flex; align-items: center; gap: 6px; }
+.progress-track { width: 100%; height: 6px; background: var(--border); border-radius: 3px; overflow: hidden; margin: 8px 0; }
+.progress-track .fill { height: 100%; background: linear-gradient(90deg, rgba(212,175,55,0.6), var(--gold)); border-radius: 3px; transition: width 0.5s ease; }
+.progress-track .fill.gold { background: var(--gold); }
+.gold-badge { display: inline-flex; align-items: center; gap: 4px; background: var(--gold); color: #000; font-size: 10px; font-weight: 700; padding: 2px 8px; border-radius: 999px; }
+.referral-card { padding: 12px; border-radius: 12px; background: var(--dark); border: 1px solid var(--gold); display: flex; align-items: center; justify-content: space-between; margin: 8px 0; }
+.referral-card code { font-family: monospace; font-size: 14px; font-weight: 700; color: var(--gold); letter-spacing: 1px; }
+.ref-btn { font-size: 10px; padding: 4px 10px; border-radius: 8px; cursor: pointer; }
+.whatsapp-preview { padding: 10px; border-radius: 10px; background: var(--card); border: 1px solid var(--border); font-size: 10px; color: rgba(255,255,255,0.55); line-height: 1.5; margin: 8px 0; }
+
+/* === FEATURE 5 PROFILE === */
+.profile-header { display: flex; align-items: center; gap: 12px; padding: 20px 16px; }
+.profile-avatar { width: 56px; height: 56px; border-radius: 50%; background: linear-gradient(135deg, rgba(212,175,55,0.3), rgba(212,175,55,0.1)); border: 2px solid rgba(212,175,55,0.5); display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+
+/* === FEATURE 6: OFFLINE === */
+.offline-banner { position: fixed; top: 0; left: 50%; transform: translateX(-50%); width: 100%; max-width: 430px; z-index: 50; background: #1A1A1A; border-left: 4px solid var(--gold); padding: 10px 16px; display: flex; align-items: center; gap: 8px; animation: slideDown 0.3s ease-out; }
+.offline-banner p { font-size: 11px; color: rgba(255,255,255,0.75); flex: 1; }
+.offline-banner .close { background: none; border: none; color: rgba(255,255,255,0.3); cursor: pointer; font-size: 14px; }
+.setting-row { display: flex; align-items: center; justify-content: space-between; padding: 12px 0; }
+.setting-row .label { display: flex; align-items: center; gap: 8px; font-size: 12px; color: rgba(255,255,255,0.7); }
+.setting-row .toggle { width: 36px; height: 18px; border-radius: 9px; background: var(--border); position: relative; cursor: pointer; transition: background 0.2s; }
+.setting-row .toggle.on { background: var(--gold); }
+.setting-row .toggle .knob { width: 14px; height: 14px; border-radius: 50%; background: #fff; position: absolute; top: 2px; left: 2px; transition: transform 0.2s; }
+.setting-row .toggle.on .knob { transform: translateX(18px); }
+
+/* === SOS in checklist === */
+.silent-alarm { font-size: 11px; color: rgba(220,38,38,0.5); cursor: pointer; padding: 12px 0; text-align: center; transition: color 0.2s; }
+.silent-alarm:hover { color: #dc2626; }
+
+/* === Family View on Map === */
+.family-view-card { position: absolute; bottom: 0; left: 0; right: 0; z-index: 20; background: var(--card); border-top: 1px solid rgba(212,175,55,0.3); border-radius: 16px 16px 0 0; padding: 16px; animation: fadeUp 0.25s ease-out; }
+.family-status { display: inline-flex; font-size: 9px; padding: 2px 8px; border-radius: 999px; margin: 2px; }
+.map-offline-note { position: absolute; top: 48px; left: 12px; z-index: 20; background: rgba(26,26,26,0.9); backdrop-filter: blur(4px); border: 1px solid var(--border); border-radius: 10px; padding: 8px 12px; }
+
+/* === Parcel mini-timeline in Profile === */
+.parcel-mini { padding: 12px; border-radius: 12px; background: var(--dark); border: 1px solid var(--border); margin-top: 8px; }
+.parcel-mini .mini-step { display: flex; align-items: center; gap: 8px; font-size: 10px; padding: 3px 0; }
+.parcel-mini .mini-dot { width: 6px; height: 6px; border-radius: 50%; flex-shrink: 0; }
+
+/* === Global SOS Pulse Animation === */
+.sos-pulse { animation: sosPulse 2s ease-in-out infinite; }
+</style>
+</head>
+<body>
+<div id="app">
+  <!-- HOME SCREEN -->
+  <div class="screen active" id="screen-home">
+    <div class="scroll-content">
+      <div class="home-cards" style="margin-top:24px">
+        <button class="home-card" onclick="navigate('book')" style="animation-delay:0.3s">
+          <div class="home-card-inner">
+            <div class="card-icon"><svg class="icon" viewBox="0 0 24 24"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg></div>
+            <div class="card-text"><h3>Book a Passenger Seat</h3><p>Travel between SA, Botswana &amp; Zimbabwe</p></div>
+            <svg class="card-arrow" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
+          </div>
+        </button>
+        <button class="home-card" onclick="navigate('parcel')" style="animation-delay:0.45s">
+          <div class="home-card-inner">
+            <div class="card-icon"><svg class="icon" viewBox="0 0 24 24"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><polyline points="9 12 11 14 15 10"/></svg></div>
+            <div class="card-text"><h3>Send a Parcel</h3><p>Secure &amp; tracked cross-border delivery</p></div>
+            <svg class="card-arrow" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
+          </div>
+        </button>
+        <button class="home-card" onclick="navigate('map')" style="animation-delay:0.6s">
+          <div class="home-card-inner">
+            <div class="card-icon"><svg class="icon" viewBox="0 0 24 24"><path d="M4.9 19.1C1 15.2 1 8.8 4.9 4.9"/><path d="M7.8 16.2c-2.3-2.3-2.3-6.1 0-8.5"/><path d="M16.2 7.8c2.3 2.3 2.3 6.1 0 8.5"/><path d="M19.1 4.9C23 8.8 23 15.1 19.1 19"/><circle cx="12" cy="12" r="2"/></svg></div>
+            <div class="card-text"><h3>Live Vehicle Map</h3><p>See where your ride is</p></div>
+            <svg class="card-arrow" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
+          </div>
+        </button>
+      </div>
+      <div class="ticker">
+        <div class="ticker-inner">
+          <span class="ticker-item"><span class="ticker-dot green"></span>Vehicle 1: Loading at Mafikeng Depot</span>
+          <span class="ticker-item"><span class="ticker-dot green"></span>Vehicle 2: Approaching Francistown</span>
+          <span class="ticker-item"><span class="ticker-dot yellow"></span>Vehicle 3: Clearing Kazungula Border</span>
+          <span class="ticker-item"><span class="ticker-dot green"></span>Vehicle 4: Departing Johannesburg</span>
+        </div>
+      </div>
+      <div class="route-mini">
+        <div class="route-mini-inner">
+          <h4>Active Route Corridor</h4>
+          <div class="route-bar">
+            <span>Mafikeng</span><div class="route-line"></div>
+            <span>Johannesburg</span><div class="route-line"></div>
+            <span>Gaborone</span><div class="route-line"></div>
+            <span>Francistown</span><div class="route-line"></div>
+            <span>Harare</span>
+          </div>
+          <div class="route-footer">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>
+            <span>4 Active Vehicles</span>
+          </div>
+        </div>
+      </div>
+      <div class="sec-badge">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+        <span>256-bit AES encrypted · Data protected per POPIA · <a href="#" onclick="showPrivacy(event)">Privacy Policy</a></span>
+      </div>
+      <div style="padding:16px 20px">
+        <button class="btn-whatsapp" onclick="sendWhatsApp('Hi MR Lexars! I need assistance with a booking.')" style="font-size:13px;padding:12px">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" style="vertical-align:middle;margin-right:6px"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/></svg>
+          Contact MR Lexars on WhatsApp
+        </button>
+      </div>
+  <div class="screen" id="screen-book">
+    <div class="scroll-content">
+      <div class="screen-header">
+        <h2>Book a Seat</h2>
+        <p>Select your route and travel details</p>
+      </div>
+      <div class="route-scroll">
+        <div class="route-scroll-inner" id="route-pills"></div>
+      </div>
+      <div id="route-display" class="route-arrow" style="display:none"></div>
+
+      <div style="padding:0 16px">
+        <button class="collapsible-btn" onclick="toggleCalendar()" style="margin-bottom:0">
+          <span style="color:rgba(255,255,255,0.7);font-weight:400;font-size:13px">Select Date</span>
+          <span id="date-display" style="color:var(--gold);font-size:13px">Tap to select</span>
+        </button>
+        <div id="calendar-picker" style="overflow:hidden;max-height:0;transition:max-height 0.3s ease">
+          <input type="date" id="date-input" class="input" style="margin-top:8px" onchange="setDate(this.value)">
+        </div>
+      </div>
+
+      <div id="trip-summary" style="display:none"></div>
+
+      <div class="form-section">
+        <input class="input" placeholder="Full Name" id="pass-name">
+        <input class="input" placeholder="Passport Number" id="pass-passport">
+        <input class="input" placeholder="Phone Number" type="tel" id="pass-phone">
+      </div>
+
+      <div class="collapsible">
+        <button class="collapsible-btn" onclick="toggleBorder()">
+          <span>Border Assist</span>
+          <svg id="border-chevron" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"/></svg>
+        </button>
+        <div class="collapsible-body" id="border-body">
+          <div class="collapsible-body-inner">
+            <div class="check-item"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--gold)" stroke-width="2"><polyline points="20 6 9 17 4 12"/></svg><span>Botswana Visa: Check Requirements</span></div>
+            <div class="check-item"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--gold)" stroke-width="2"><polyline points="20 6 9 17 4 12"/></svg><span>Zimbabwe Visa: KAZA Univisa Available</span></div>
+            <div class="check-item"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--gold)" stroke-width="2"><polyline points="20 6 9 17 4 12"/></svg><span>Documents: Passport &gt; 6 months validity</span></div>
+          </div>
+        </div>
+      </div>
+
+      <div id="driver-card-container"></div>
+
+      <div style="padding:16px 16px 24px">
+        <button class="btn-gold" id="book-btn" disabled onclick="confirmBooking()">Confirm Booking</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- SEND PARCEL SCREEN -->
+  <div class="screen" id="screen-parcel">
+    <div class="scroll-content">
+      <div class="screen-header">
+        <h2>Send a Parcel</h2>
+        <p>Cross-border parcel delivery</p>
+      </div>
+      <div style="padding:0 16px;display:flex;flex-direction:column;gap:12px">
+        <div class="card-gold" style="padding:16px">
+          <h3 style="font-size:13px;font-weight:600;color:var(--gold);margin-bottom:12px">Parcel Details</h3>
+          <input class="input" placeholder="Parcel Name / Description" id="par-name">
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:12px">
+            <input class="input" placeholder="Weight (kg)" type="number" id="par-weight">
+            <input class="input" placeholder="Value ($)" type="number" id="par-value">
+          </div>
+        </div>
+        <div class="card" style="padding:16px">
+          <h3 style="font-size:13px;font-weight:600;color:var(--text-dim);margin-bottom:12px">Sender</h3>
+          <input class="input" placeholder="Full Name" id="sender-name" style="margin-bottom:12px">
+          <input class="input" placeholder="Phone Number" type="tel" id="sender-phone">
+        </div>
+        <div class="card" style="padding:16px">
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
+            <h3 style="font-size:13px;font-weight:600;color:var(--text-dim)">Receiver</h3>
+            <div class="toggle-group">
+              <button class="toggle-btn active" data-country="Zimbabwe" onclick="setReceiverCountry('Zimbabwe')">Zimbabwe</button>
+              <button class="toggle-btn" data-country="Botswana" onclick="setReceiverCountry('Botswana')">Botswana</button>
+            </div>
+          </div>
+          <input class="input" placeholder="Full Name" id="receiver-name" style="margin-bottom:12px">
+          <input class="input" placeholder="Phone Number" type="tel" id="receiver-phone">
+        </div>
+        <div class="customs-box" style="margin:0">
+          <div class="customs-box-inner" style="margin:0">
+            <div class="customs-header">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
+              <h3>Customs Declaration</h3>
+            </div>
+            <pre class="customs-text" id="customs-text">CUSTOMS DECLARATION
+-------------------
+Parcel: —
+Weight: — kg
+Declared Value: $0
+Sender: —
+Receiver: —
+Destination: Zimbabwe</pre>
+          </div>
+        </div>
+        <button class="btn-outline-gold" onclick="calcParcelPrice()">Calculate Price</button>
+        <div id="parcel-price" style="display:none"></div>
+        <button class="btn-gold" id="parcel-btn" disabled onclick="sendParcel()" style="margin-bottom:24px">Send Parcel</button>
+        <div id="parcel-timeline" style="display:none;margin-bottom:24px"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- LIVE MAP SCREEN -->
+  <div class="screen map-screen" id="screen-map">
+    <div style="display:flex;flex-direction:column;flex:1;overflow:hidden">
+      <div class="map-header">
+        <div>
+          <h2 style="font-size:20px;font-weight:700;color:var(--gold)">Live Map</h2>
+          <p style="font-size:12px;color:var(--text-dim);margin-top:2px">Tracking corridor: SA → Botswana → Zim</p>
+        </div>
+        <div style="display:flex;align-items:center;gap:8px">
+          <button class="driver-toggle" id="driver-toggle-btn" onclick="toggleDriverMode()" title="Driver Mode">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg>
+          </button>
+          <div class="map-live">
+            <span class="dot"></span> Live
+          </div>
+        </div>
+      </div>
+      <div class="map-container" id="map-container">
+        <div id="leaflet-map"></div>
+        <div id="vehicle-popup" style="display:none"></div>
+        <div id="driver-panel" style="display:none">
+          <div class="driver-panel-inner">
+            <button class="driver-panel-close" onclick="closeDriverPanel()">&times;</button>
+            <h4 style="color:var(--gold);font-size:14px;margin-bottom:10px;display:flex;align-items:center;gap:6px">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg>
+              Driver Location Sharing
+            </h4>
+            <label style="font-size:11px;color:var(--text-dim);display:block;margin-bottom:4px">Select your vehicle:</label>
+            <select id="driver-vehicle-select" style="width:100%;padding:10px;border-radius:10px;background:var(--dark);color:#fff;border:1px solid var(--border);font-size:13px;margin-bottom:10px">
+              <option value="">-- Select Vehicle --</option>
+              <option value="0">MR Lexars 1 (Mafikeng Depot)</option>
+              <option value="1">MR Lexars 2 (On Route)</option>
+              <option value="2">MR Lexars 3 (Kazungula)</option>
+              <option value="3">MR Lexars 4 (On Route)</option>
+            </select>
+            <label style="font-size:11px;color:var(--text-dim);display:block;margin-bottom:4px">Driver PIN:</label>
+            <input type="password" id="driver-pin" placeholder="Enter PIN" style="width:100%;padding:10px;border-radius:10px;background:var(--dark);color:#fff;border:1px solid var(--border);font-size:13px;margin-bottom:12px">
+            <button class="btn-gold" id="driver-start-btn" onclick="startSharing()" style="padding:12px;font-size:13px">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="vertical-align:middle;margin-right:4px"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg>
+              Start Sharing Location
+            </button>
+            <div id="driver-status" style="display:none;margin-top:10px;padding:10px;border-radius:10px;background:rgba(74,222,128,0.1);border:1px solid rgba(74,222,128,0.3);text-align:center;font-size:12px;color:#4ade80">
+              <span style="display:flex;align-items:center;justify-content:center;gap:6px">
+                <span style="width:8px;height:8px;border-radius:50%;background:#4ade80;animation:pulse 1s infinite"></span>
+                Sharing location — updating in real-time
+              </span>
+            </div>
+          </div>
+        </div>
+        <button class="fab-report" id="fab-report" onclick="openReportCard()" title="Report Police / Delay">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2l2 7h7l-5.5 4.5L18 21l-6-3.5L6 21l2.5-7.5L3 9h7z"/><circle cx="12" cy="12" r="3" fill="currentColor"/></svg>
+        </button>
+        <div class="report-card" id="report-card" style="display:none">
+          <h4>Report Stop / Delay</h4>
+          <label>Report Type</label>
+          <select id="report-type"><option value="police">Police Checkpoint</option><option value="accident">Accident Ahead</option><option value="roadworks">Roadworks</option><option value="customs">Border Delay</option></select>
+          <label>Severity</label>
+          <select id="report-severity"><option value="low">Low — Brief stop</option><option value="medium" selected>Medium — 10–30 min</option><option value="high">High — 30+ min delay</option></select>
+          <div class="btn-row">
+            <button class="btn-gold" style="flex:1;padding:10px;font-size:12px" onclick="submitReport()">Submit</button>
+            <button class="btn-outline-gold" style="flex:0;padding:10px 16px;font-size:12px" onclick="closeReportCard()">Cancel</button>
+          </div>
+        </div>
+        <div id="alert-banner" style="display:none"></div>
+        <div id="checklist-panel" class="checklist-panel" style="display:none"></div>
+        <div id="family-view-card" class="family-view-card" style="display:none">
+          <div style="display:flex;align-items:center;gap:10px">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--gold)" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+            <div style="flex:1">
+              <div style="font-size:12px;font-weight:600;color:#fff">Family View</div>
+              <div style="font-size:10px;color:var(--text-dim)">Your family can see your location</div>
+            </div>
+            <span class="family-status" style="background:rgba(74,222,128,0.15);color:#4ade80;border:1px solid rgba(74,222,128,0.3)">Tracking Active</span>
+          </div>
+        </div>
+        <div style="position:absolute;bottom:80px;right:16px;z-index:15">
+          <span class="silent-alarm" onclick="triggerSilentAlarm()">🔕 Silent Alarm</span>
+        </div>
+        <button id="fam-view-btn" style="display:none;position:absolute;top:16px;right:16px;z-index:15;background:rgba(212,175,55,0.15);border:1px solid rgba(212,175,55,0.3);color:var(--gold);padding:6px 12px;border-radius:999px;font-size:10px;font-weight:600;cursor:pointer" onclick="toggleFamilyView()">👨‍👩‍👧‍👦 Family View</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- PROFILE SCREEN -->
+  <div class="screen" id="screen-profile">
+    <div class="scroll-content">
+      <div id="profile-content"></div>
+    </div>
+  </div>
+
+  <!-- SOS FLOATING BUTTON (hidden by default) -->
+  <div id="sos-btn" class="sos-btn" style="display:none">
+    <div class="circle" id="sos-circle" onclick="showSOSConfirm()">
+      <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2"><path d="M12 2l2 7h7l-5.5 4.5L18 21l-6-3.5L6 21l2.5-7.5L3 9h7z"/><circle cx="12" cy="12" r="3" fill="#fff"/></svg>
+    </div>
+    <span class="label" id="sos-label">SOS</span>
+  </div>
+
+  <!-- SOS OVERLAY (hidden by default) -->
+  <div id="sos-overlay" class="sos-overlay" style="display:none"></div>
+
+  <!-- OFFLINE BANNER (hidden by default) -->
+  <div id="offline-banner" class="offline-banner" style="display:none">
+    <span>📡</span>
+    <p>You are offline. Essential features available. Updates will sync when reconnected.</p>
+    <button class="close" onclick="dismissOffline()">&times;</button>
+  </div>
+
+  <!-- MODAL (hidden by default) -->
+  <div id="modal-overlay" class="modal-overlay" style="display:none">
+    <div class="modal" id="modal-content"></div>
+  </div>
+
+  <!-- Bottom Tab Bar -->
+  <nav class="tab-bar" id="tab-bar">
+    <div class="tab-indicator" id="tab-indicator" style="left:8px"></div>
+    <button class="tab-btn active" data-tab="home" onclick="navigate('home')">
+      <svg viewBox="0 0 24 24"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
+      <span>Home</span>
+    </button>
+    <button class="tab-btn" data-tab="book" onclick="navigate('book')">
+      <svg viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="14" rx="2"/><path d="M3 7h18"/><path d="M7 3v4"/><path d="M17 3v4"/><circle cx="12" cy="13" r="2"/><path d="M12 19v-4"/></svg>
+      <span>Book Seat</span>
+    </button>
+    <button class="tab-btn" data-tab="parcel" onclick="navigate('parcel')">
+      <svg viewBox="0 0 24 24"><path d="M16.5 9.4 7.55 4.24"/><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/><polyline points="3.29 7 12 12 20.71 7"/><line x1="12" y1="22" x2="12" y2="12"/></svg>
+      <span>Send Parcel</span>
+    </button>
+    <button class="tab-btn" data-tab="map" onclick="navigate('map')">
+      <svg viewBox="0 0 24 24"><path d="M1 6v16l7-4 8 4 7-4V2l-7 4-8-4-7 4z"/><path d="M8 2v16"/><path d="M16 6v16"/></svg>
+      <span>Live Map</span>
+    </button>
+    <button class="tab-btn" data-tab="profile" onclick="navigate('profile')">
+      <svg viewBox="0 0 24 24"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+      <span>Profile</span>
+    </button>
+  </nav>
+</div>
+
+<script>
+// ===== STATE =====
+const state = {
+  activeTab: 'home',
+  driverIdx: -1,
+  booking: { pickup: null, dropoff: null, date: new Date().toISOString().split('T')[0], fullName: '', passport: '', phone: '' },
+  parcel: { name: '', weight: '', value: '', senderName: '', senderPhone: '', receiverName: '', receiverPhone: '', receiverCountry: 'Zimbabwe' },
+  ticket: null,
+  trackingId: null,
+  borderOpen: false,
+  calendarOpen: false,
+  selectedVehicle: null,
+  // Feature 1-6 state
+  hasActiveTrip: false,
+  hasActiveParcel: false,
+  sosActive: false,
+  familyTracking: { enabled:false, phone:'', sent:false },
+  familyView: false,
+  offlineMode: false,
+  silentAlarmSent: false,
+  loyalty: { trips: 4, goldTier: false },
+  referral: { code:'LEXAR-REF-8291', balance:5.0, referrals:[{name:'Tendai C.',status:'pending'},{name:'Farai M.',status:'completed',credit:5}] },
+  parcelHistory: [],
+};
+
+// ===== API CLIENT =====
+const API = (location.hostname === 'localhost' || location.hostname === '127.0.0.1')
+  ? 'http://localhost:3001/api'
+  : 'https://mr-lexar-api.onrender.com/api';
+let authToken = localStorage.getItem('ml_token') || null;
+let currentUser = JSON.parse(localStorage.getItem('ml_user') || 'null');
+
+async function api(path, opts = {}) {
+  const headers = { 'Content-Type': 'application/json' };
+  if (authToken) headers['Authorization'] = 'Bearer ' + authToken;
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), 3000);
+  try {
+    const res = await fetch(API + path, { ...opts, headers, signal: controller.signal });
+    clearTimeout(timeout);
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || 'Request failed');
+    return data;
+  } catch (e) {
+    clearTimeout(timeout);
+    throw e;
+  }
+}
+
+async function autoLogin() {
+  const saved = localStorage.getItem('ml_user');
+  if (saved) {
+    currentUser = JSON.parse(saved);
+    authToken = localStorage.getItem('ml_token') || null;
+    state.loyalty.trips = currentUser.loyaltyTrips || 4;
+    state.loyalty.goldTier = currentUser.goldTier || false;
+    state.referral.code = currentUser.referralCode || 'LEXAR-REF-8291';
+    state.referral.balance = currentUser.referralBalance || 5.0;
+  }
+  try {
+    if (authToken) {
+      const user = await api('/auth/me');
+      currentUser = user;
+      localStorage.setItem('ml_user', JSON.stringify(user));
+      state.loyalty.trips = user.loyaltyTrips || 0;
+      state.loyalty.goldTier = user.goldTier || false;
+      state.referral.code = user.referralCode || 'LEXAR-REF-8291';
+      state.referral.balance = user.referralBalance || 0;
+      return;
+    }
+    const result = await api('/auth/login', { method: 'POST', body: JSON.stringify({ phone: '+27710779990', pin: '1234' }) });
+    authToken = result.token;
+    currentUser = result.user;
+    localStorage.setItem('ml_token', authToken);
+    localStorage.setItem('ml_user', JSON.stringify(currentUser));
+    state.loyalty.trips = currentUser.loyaltyTrips || 0;
+    state.loyalty.goldTier = currentUser.goldTier || false;
+    state.referral.code = currentUser.referralCode || 'LEXAR-REF-8291';
+    state.referral.balance = currentUser.referralBalance || 0;
+  } catch (e) {
+    // API offline — using saved/guest state already above
+  }
+}
+
+const cities = ['Mafikeng','Johannesburg','Gaborone','Francistown','Kazungula','Bulawayo','Harare'];
+
+const trips = [
+  { vehicle: 'MR Lexars Shuttle 03', depart: '06:00 AM', seats: 4, price: 80 },
+  { vehicle: 'MR Lexars Shuttle 07', depart: '10:30 AM', seats: 6, price: 75 },
+  { vehicle: 'MR Lexars Shuttle 12', depart: '02:00 PM', seats: 3, price: 90 },
+  { vehicle: 'MR Lexars Express 02', depart: '08:00 PM', seats: 8, price: 65 },
+];
+
+const vehicles = [
+  { id: 'v1', label: 'MR Lexars 1 (3 passengers)', type: 'passenger', speed: '80 km/h', eta: '45 mins to Francistown', status: 'On Route' },
+  { id: 'v2', label: 'MR Lexars 2 (5 parcels)', type: 'parcel', speed: '35 km/h', eta: 'Clearing border', status: 'At Kazungula Border' },
+  { id: 'v3', label: 'MR Lexars 3 (2 passengers)', type: 'passenger', speed: '95 km/h', eta: '1h 20min to Gaborone', status: 'On Route' },
+];
+
+// ===== ROUTE PILLS (Book Screen) =====
+function renderPills() {
+  const container = document.getElementById('route-pills');
+  const pickup = state.booking.pickup;
+  const dropoff = state.booking.dropoff;
+  const pickupIdx = pickup ? cities.indexOf(pickup) : -1;
+
+  container.innerHTML = cities.map((city, i) => {
+    const isPickup = pickup === city;
+    const isDropoff = dropoff === city;
+    const enabled = !pickup || i > pickupIdx || isPickup;
+    let cls = 'pill';
+    if (isPickup) cls += ' pickup';
+    else if (isDropoff) cls += ' dropoff';
+    else if (!enabled) cls += ' disabled';
+    const badge = isPickup ? '<span class="pill-badge">P</span>' : isDropoff ? '<span class="pill-badge">D</span>' : '';
+    const disabled = !enabled && !isPickup ? 'disabled' : '';
+    return `<button class="${cls}" ${disabled} onclick="selectCity(${i})">${city}${badge}</button>`;
+  }).join('');
+
+  updateRouteDisplay();
+  updateTripSummary();
+}
+
+function selectCity(idx) {
+  const city = cities[idx];
+  const pickup = state.booking.pickup;
+  const dropoff = state.booking.dropoff;
+  const pickupIdx = pickup ? cities.indexOf(pickup) : -1;
+
+  if (pickup === city || dropoff === city) return;
+  if (!pickup) {
+    state.booking.pickup = city;
+  } else if (idx > pickupIdx) {
+    state.booking.dropoff = city;
+  }
+  renderPills();
+  updateBookBtn();
+}
+
+function updateRouteDisplay() {
+  const el = document.getElementById('route-display');
+  const p = state.booking.pickup;
+  const d = state.booking.dropoff;
+  if (p && d) {
+    el.style.display = 'flex';
+    el.innerHTML = `<span style="color:var(--gold);font-weight:500">${p}</span>
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--gold)" stroke-width="2"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
+      <span style="color:var(--gold);font-weight:500">${d}</span>`;
+  } else {
+    el.style.display = 'none';
+  }
+}
+
+function updateTripSummary() {
+  const el = document.getElementById('trip-summary');
+  const p = state.booking.pickup;
+  const d = state.booking.dropoff;
+  if (!p || !d) { el.style.display = 'none'; return; }
+  const trip = trips[Math.abs(p.length + d.length) % trips.length];
+  el.style.display = 'block';
+  el.innerHTML = `<div class="trip-summary">
+    <div class="row"><h3>${trip.vehicle}</h3><span class="price">\$${trip.price}</span></div>
+    <div class="grid">
+      <div><span class="label">Departs</span><div class="value">${trip.depart}</div></div>
+      <div><span class="label">Available Seats</span><div class="value">${trip.seats} seats</div></div>
+    </div>
+  </div>`;
+}
+
+function updateBookBtn() {
+  const btn = document.getElementById('book-btn');
+  btn.disabled = !(state.booking.pickup && state.booking.dropoff && state.booking.fullName.trim());
+}
+
+// ===== DATE =====
+function toggleCalendar() {
+  state.calendarOpen = !state.calendarOpen;
+  document.getElementById('calendar-picker').style.maxHeight = state.calendarOpen ? '200px' : '0';
+}
+function setDate(val) {
+  state.booking.date = val;
+  const d = new Date(val + 'T12:00:00');
+  document.getElementById('date-display').textContent = d.toLocaleDateString('en-ZA', { weekday:'short', day:'numeric', month:'short', year:'numeric' });
+  toggleCalendar();
+}
+
+// ===== BORDER ASSIST =====
+function toggleBorder() {
+  state.borderOpen = !state.borderOpen;
+  document.getElementById('border-body').classList.toggle('open', state.borderOpen);
+}
+
+// ===== BOOKING =====
+function confirmBooking() {
+  const name = document.getElementById('pass-name').value.trim();
+  const passport = document.getElementById('pass-passport').value.trim();
+  const phone = document.getElementById('pass-phone').value.trim();
+  if (!name || !state.booking.pickup || !state.booking.dropoff) return;
+  state.booking.fullName = name;
+  state.booking.passport = passport;
+  state.booking.phone = phone;
+  const id = 'ML-' + Math.random().toString(36).substring(2,8).toUpperCase();
+  state.ticket = { id, vehicle: 'MR LEXAR ZW-01' };
+
+  const modal = document.getElementById('modal-content');
+  modal.innerHTML = `
+    <button class="modal-close" onclick="closeModal()">&times;</button>
+    <div class="modal-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"/></svg></div>
+    <h3>Booking Confirmed!</h3>
+    <p class="sub">Your digital ticket is ready</p>
+    <div class="ticket">
+      <div class="qr-placeholder">
+        <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="var(--gold)" stroke-width="2">
+          <rect x="3" y="3" width="18" height="18" rx="2"/><rect x="7" y="7" width="3" height="3"/><rect x="14" y="7" width="3" height="3"/><rect x="7" y="14" width="3" height="3"/><rect x="14" y="14" width="3" height="3"/>
+        </svg>
+      </div>
+      <div class="ticket-row"><span class="lbl">Ticket</span><span class="val">${id}</span></div>
+      <div class="ticket-row"><span class="lbl">Passenger</span><span class="val">${name}</span></div>
+      <div class="ticket-row"><span class="lbl">Route</span><span class="val">${state.booking.pickup} → ${state.booking.dropoff}</span></div>
+      <div class="ticket-row"><span class="lbl">Vehicle</span><span class="val">MR LEXAR ZW-01</span></div>
+      <div class="ticket-row"><span class="lbl">Date</span><span class="val">${new Date(state.booking.date+'T12:00:00').toLocaleDateString()}</span></div>
+    </div>
+    <button class="btn-gold" onclick="closeModal()">Done</button>`;
+  document.getElementById('modal-overlay').style.display = 'flex';
+}
+
+function closeModal() {
+  document.getElementById('modal-overlay').style.display = 'none';
+}
+
+// ===== PARCEL =====
+function setReceiverCountry(country) {
+  state.parcel.receiverCountry = country;
+  document.querySelectorAll('.toggle-btn').forEach(b => {
+    b.classList.toggle('active', b.dataset.country === country);
+  });
+  updateCustomsText();
+}
+
+function updateCustomsText() {
+  const p = state.parcel;
+  document.getElementById('customs-text').textContent =
+    `CUSTOMS DECLARATION\n-------------------\nParcel: ${p.name || '—'}\nWeight: ${p.weight || '—'} kg\nDeclared Value: $${parseFloat(p.value) || 0}\nSender: ${p.senderName || '—'} (${p.senderPhone || '—'})\nReceiver: ${p.receiverName || '—'} (${p.receiverPhone || '—'})\nDestination: ${p.receiverCountry}\n\nThis parcel contains personal/business goods\ntransported under MR Lexars Cross Border service.\nAll items declared as per SADC customs regulations.`;
+}
+
+function updateParcelBtn() {
+  const p = state.parcel;
+  document.getElementById('parcel-btn').disabled = !(p.name && p.senderName && p.receiverName);
+}
+
+function calcParcelPrice() {
+  const val = parseFloat(state.parcel.value) || 0;
+  const price = 10 + val * 0.05;
+  const el = document.getElementById('parcel-price');
+  el.style.display = 'block';
+  el.innerHTML = `<div style="padding:16px;border-radius:16px;background:linear-gradient(135deg,rgba(212,175,55,0.1),var(--card));border:1px solid rgba(212,175,55,0.3);display:flex;justify-content:space-between;align-items:center">
+    <span style="color:rgba(255,255,255,0.7);font-size:13px">Estimated Total</span>
+    <span style="font-size:20px;font-weight:700;color:var(--gold)">\$${price.toFixed(2)}</span>
+  </div>`;
+}
+
+async function sendParcel() {
+  try {
+    const result = await api('/parcels', {
+      method: 'POST',
+      body: JSON.stringify({
+        name: state.parcel.name, weight: state.parcel.weight, value: state.parcel.value,
+        senderName: state.parcel.senderName, senderPhone: state.parcel.senderPhone,
+        receiverName: state.parcel.receiverName, receiverPhone: state.parcel.receiverPhone,
+        receiverCountry: state.parcel.receiverCountry,
+      }),
+    });
+    const id = result.id;
+    state.trackingId = id;
+    state.hasActiveParcel = true;
+    updateSOS();
+    const details = { name: state.parcel.name || 'Unnamed', weight: state.parcel.weight || '0', value: state.parcel.value || '0' };
+    state.parcelHistory.push({ id, timestamp: new Date().toLocaleDateString('en-ZA'), details, timeline: result.timeline });
+
+    const modal = document.getElementById('modal-content');
+    modal.innerHTML = `
+      <button class="modal-close" onclick="closeModal()">&times;</button>
+      <div class="modal-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"/></svg></div>
+      <h3>Parcel Registered!</h3>
+      <p class="sub">Your tracking ID: ${id}</p>
+      <div style="margin-bottom:16px">
+        <div id="parcel-timeline" style="display:block;margin-bottom:12px"></div>
+      </div>
+      <div style="display:flex;gap:12px">
+        <button class="btn-outline-gold" style="flex:1" onclick="closeModal()">Close</button>
+        <button class="btn-gold" style="flex:1" onclick="closeModal();navigate('map')">
+          <span style="display:flex;align-items:center;justify-content:center;gap:6px">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>
+            Track on Live Map
+          </span>
+        </button>
+      </div>
+      <button class="btn-whatsapp" onclick="sendWhatsApp('Hi MR Lexars, I just registered a parcel! Tracking: ' + (state.trackingId || '') + ', Item: ' + (state.parcel?.name || '') + ', To: ' + (state.parcel?.receiverName || '') + ' in ' + (state.parcel?.receiverCountry || '') + '.')" style="margin-top:8px;font-size:13px;padding:12px">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" style="vertical-align:middle;margin-right:6px"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/></svg>
+        Notify MR Lexars on WhatsApp
+      </button>`;
+    document.getElementById('modal-overlay').style.display = 'flex';
+    renderTimeline('parcel-timeline');
+  } catch (e) {
+    // API offline — use local fallback
+    const id = 'MLX-P-' + Date.now().toString(36).toUpperCase();
+    state.trackingId = id;
+    state.hasActiveParcel = true;
+    updateSOS();
+    const details = { name: state.parcel.name || 'Unnamed', weight: state.parcel.weight || '0', value: state.parcel.value || '0' };
+    state.parcelHistory.push({
+      id, timestamp: new Date().toLocaleDateString('en-ZA'), details,
+      timeline: [
+        { stage: 'Registered', done: true, time: 'Just now' },
+        { stage: 'Picked Up', done: false, time: 'Pending' },
+        { stage: 'In Transit', done: false, time: 'Pending' },
+        { stage: 'Customs Clearance', done: false, time: 'Pending' },
+        { stage: 'Delivered', done: false, time: 'Pending' },
+      ],
+    });
+    const modal = document.getElementById('modal-content');
+    modal.innerHTML = `
+      <button class="modal-close" onclick="closeModal()">&times;</button>
+      <div class="modal-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"/></svg></div>
+      <h3>Parcel Registered! \u{1F4E6}</h3>
+      <p class="sub">Your tracking ID: ${id}</p>
+      <button class="btn-gold" onclick="closeModal()" style="margin-top:8px">Close</button>
+      <button class="btn-whatsapp" onclick="sendWhatsApp('Hi MR Lexars, I just registered a parcel! Tracking: ' + (state.trackingId || '') + ', Item: ' + (state.parcel?.name || '') + ', To: ' + (state.parcel?.receiverName || '') + ' in ' + (state.parcel?.receiverCountry || '') + '.')" style="margin-top:8px;font-size:13px;padding:12px">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" style="vertical-align:middle;margin-right:6px"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/></svg>
+        Notify MR Lexars on WhatsApp
+      </button>`;
+    document.getElementById('modal-overlay').style.display = 'flex';
+  }
+}
+
+// ===== LIVE MAP (LEAFLET) =====
+let leafletMap = null;
+let mapInitialized = false;
+
+const routeCoords = [
+  { name: 'Mafikeng', lat: -25.8650, lng: 25.6444 },
+  { name: 'Johannesburg', lat: -26.2041, lng: 28.0473 },
+  { name: 'Gaborone', lat: -24.6282, lng: 25.9231 },
+  { name: 'Francistown', lat: -21.1742, lng: 27.5125 },
+  { name: 'Kazungula', lat: -17.7877, lng: 25.2669 },
+  { name: 'Bulawayo', lat: -20.1483, lng: 28.5818 },
+  { name: 'Harare', lat: -17.8252, lng: 31.0335 },
+];
+
+const vehicleData = [
+  { label: 'MR Lexars 1 (loading at Mafikeng)', type: 'passenger', lat: -25.865, lng: 25.644, speed: '0 km/h', eta: 'Departing soon', status: 'Loading at Mafikeng Depot' },
+  { label: 'MR Lexars 2 (3 passengers)', type: 'passenger', lat: -22.6, lng: 27.1, speed: '80 km/h', eta: '45 mins to Francistown', status: 'On Route' },
+  { label: 'MR Lexars 3 (5 parcels)', type: 'parcel', lat: -17.79, lng: 25.27, speed: '35 km/h', eta: 'Clearing border', status: 'At Kazungula Border' },
+  { label: 'MR Lexars 4 (2 passengers)', type: 'passenger', lat: -25.3, lng: 27.2, speed: '95 km/h', eta: '1h 20min to Gaborone', status: 'On Route' },
+];
+
+const WA_PHONE = '27710779990';
+
+let vehicleMarkers = [];
+let driverWatchId = null;
+
+function toggleDriverMode() {
+  const panel = document.getElementById('driver-panel');
+  if (panel.style.display === 'block') { closeDriverPanel(); return; }
+  panel.style.display = 'block';
+}
+
+function closeDriverPanel() {
+  document.getElementById('driver-panel').style.display = 'none';
+}
+
+function startSharing() {
+  const idx = parseInt(document.getElementById('driver-vehicle-select').value);
+  const pin = document.getElementById('driver-pin').value.trim();
+  if (isNaN(idx) || idx < 0 || idx >= vehicleData.length) { showConfirmBanner('Please select a vehicle'); return; }
+  if (pin !== '1234') { showConfirmBanner('Invalid driver PIN'); return; }
+  state.driverIdx = idx;
+  document.getElementById('driver-start-btn').textContent = 'Starting...';
+  document.getElementById('driver-start-btn').disabled = true;
+  function onPosition(lat, lng, speed) {
+    vehicleData[idx].lat = lat;
+    vehicleData[idx].lng = lng;
+    vehicleData[idx].status = 'Live • Sharing Location';
+    vehicleData[idx].speed = Math.round(speed || 0) + ' km/h';
+    vehicleData[idx].eta = 'Live tracking';
+    sendLocationToApi(idx, lat, lng);
+    updateVehicleMarker(idx);
+    document.getElementById('driver-toggle-btn').classList.add('active');
+  }
+  function onError(msg) {
+    showConfirmBanner('Location error: ' + msg);
+    document.getElementById('driver-start-btn').textContent = 'Start Sharing Location';
+    document.getElementById('driver-start-btn').disabled = false;
+  }
+  var Geo = window.Capacitor && window.Capacitor.Plugins && window.Capacitor.Plugins.Geolocation;
+  if (Geo) {
+    Geo.watchPosition({ enableHighAccuracy: true, timeout: 10000 }, function(pos, err) {
+      if (err) { onError(err.message || 'Location unavailable'); return; }
+      if (pos && pos.coords) onPosition(pos.coords.latitude, pos.coords.longitude, pos.coords.speed);
+    }).then(function(id) { driverWatchId = id; });
+  } else if (navigator.geolocation) {
+    driverWatchId = navigator.geolocation.watchPosition(
+      function(pos) { onPosition(pos.coords.latitude, pos.coords.longitude, pos.coords.speed); },
+      function(err) { onError(err.message); },
+      { enableHighAccuracy: true, timeout: 10000, maximumAge: 5000 }
+    );
+  } else {
+    showConfirmBanner('Geolocation not supported on this device');
+    return;
+  }
+  document.getElementById('driver-status').style.display = 'block';
+  document.getElementById('driver-vehicle-select').disabled = true;
+  document.getElementById('driver-pin').disabled = true;
+  document.getElementById('driver-start-btn').textContent = 'Sharing Active';
+  document.getElementById('driver-start-btn').style.background = '#25D366';
+  document.getElementById('driver-start-btn').style.color = '#fff';
+}
+
+function stopSharing() {
+  if (driverWatchId != null) {
+    var Geo = window.Capacitor && window.Capacitor.Plugins && window.Capacitor.Plugins.Geolocation;
+    if (Geo) Geo.clearWatch({ id: driverWatchId });
+    else navigator.geolocation.clearWatch(driverWatchId);
+    driverWatchId = null;
+  }
+  state.driverIdx = -1;
+  document.getElementById('driver-toggle-btn').classList.remove('active');
+  document.getElementById('driver-panel').style.display = 'none';
+  document.getElementById('driver-start-btn').textContent = 'Start Sharing Location';
+  document.getElementById('driver-start-btn').disabled = false;
+  document.getElementById('driver-start-btn').style.background = '';
+  document.getElementById('driver-start-btn').style.color = '';
+  document.getElementById('driver-vehicle-select').disabled = false;
+  document.getElementById('driver-pin').disabled = false;
+  document.getElementById('driver-status').style.display = 'none';
+}
+
+function sendLocationToApi(idx, lat, lng) {
+  // Always save to localStorage for cross-tab sync
+  try {
+    const key = 'ml_v' + idx;
+    localStorage.setItem(key, JSON.stringify({
+      lat, lng,
+      speed: vehicleData[idx].speed,
+      status: vehicleData[idx].status,
+      ts: Date.now(),
+    }));
+  } catch (e) {}
+  // Also POST to backend if available
+  api('/location', {
+    method: 'POST',
+    body: JSON.stringify({ vehicleIdx: idx, lat, lng, speed: vehicleData[idx].speed, status: vehicleData[idx].status }),
+  }).catch(() => {});
+}
+
+function pollVehicleLocations() {
+  // Try API first
+  api('/locations').then(locations => {
+    if (locations && locations.length) {
+      locations.forEach(loc => {
+        if (loc.vehicleIdx >= 0 && loc.vehicleIdx < vehicleData.length) {
+          vehicleData[loc.vehicleIdx].lat = loc.lat;
+          vehicleData[loc.vehicleIdx].lng = loc.lng;
+          if (loc.speed) vehicleData[loc.vehicleIdx].speed = loc.speed;
+          if (loc.status) vehicleData[loc.vehicleIdx].status = loc.status;
+          updateVehicleMarker(loc.vehicleIdx);
+        }
+      });
+      return;
+    }
+  }).catch(() => {
+    // Fall back to localStorage
+    const now = Date.now();
+    for (let i = 0; i < vehicleData.length; i++) {
+      try {
+        const raw = localStorage.getItem('ml_v' + i);
+        if (!raw) continue;
+        const loc = JSON.parse(raw);
+        if (now - loc.ts > 30000) continue;
+        vehicleData[i].lat = loc.lat;
+        vehicleData[i].lng = loc.lng;
+        if (loc.speed) vehicleData[i].speed = loc.speed;
+        if (loc.status) vehicleData[i].status = loc.status;
+        updateVehicleMarker(i);
+      } catch (e) {}
+    }
+  });
+}
+
+function updateVehicleMarker(idx) {
+  if (!leafletMap || !vehicleMarkers[idx]) return;
+  const v = vehicleData[idx];
+  vehicleMarkers[idx].setLatLng([v.lat, v.lng]);
+  vehicleMarkers[idx].setPopupContent(`
+    <div style="min-width:160px">
+      <div style="font-weight:600;font-size:14px;color:#D4AF37;margin-bottom:4px">${v.label}</div>
+      <div style="display:flex;align-items:center;gap:4px;font-size:11px;color:#4ade80;margin-bottom:8px">
+        <span style="width:6px;height:6px;border-radius:50%;background:#4ade80;display:inline-block;animation:pulse 1.5s infinite"></span>
+        ${v.status}
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:4px;font-size:11px">
+        <div style="background:#0B0B0C;border-radius:8px;padding:6px;text-align:center"><span style="color:rgba(255,255,255,0.4);display:block">Speed</span><span style="color:#D4AF37;font-weight:600">${v.speed}</span></div>
+        <div style="background:#0B0B0C;border-radius:8px;padding:6px;text-align:center"><span style="color:rgba(255,255,255,0.4);display:block">ETA</span><span style="color:#D4AF37;font-weight:600;font-size:10px">${v.eta}</span></div>
+        <div style="background:#0B0B0C;border-radius:8px;padding:6px;text-align:center"><span style="color:rgba(255,255,255,0.4);display:block">Status</span><span style="color:#4ade80;font-weight:600;font-size:10px">${v.status.split(' ')[0]}</span></div>
+      </div>
+    </div>
+  `);
+}
+
+setInterval(pollVehicleLocations, 5000);
+
+function sendWhatsApp(msg) {
+  window.open('https://wa.me/' + WA_PHONE + '?text=' + encodeURIComponent(msg), '_blank');
+}
+
+// ===== SECURITY & DATA PROTECTION =====
+// Input sanitizer — strips XSS and injection patterns
+function sanitize(str) {
+  if (!str) return '';
+  return String(str)
+    .replace(/[<>&"']/g, function(m) {
+      switch(m) { case '<': return '&lt;'; case '>': return '&gt;'; case '&': return '&amp;'; case '"': return '&quot;'; case "'": return '&#x27;'; default: return m; }
+    })
+    .replace(/[<>]/g, '')
+    .trim();
+}
+
+// Auto-clear sensitive form data after 15 minutes of inactivity
+let sessionTimer = null;
+function resetSessionTimer() {
+  if (sessionTimer) clearTimeout(sessionTimer);
+  sessionTimer = setTimeout(() => {
+    state.booking.fullName = ''; state.booking.passport = ''; state.booking.phone = '';
+    state.parcel.senderName = ''; state.parcel.senderPhone = '';
+    state.parcel.receiverName = ''; state.parcel.receiverPhone = '';
+    document.getElementById('pass-name').value = '';
+    document.getElementById('pass-passport').value = '';
+    document.getElementById('pass-phone').value = '';
+    document.getElementById('sender-name').value = '';
+    document.getElementById('sender-phone').value = '';
+    document.getElementById('receiver-name').value = '';
+    document.getElementById('receiver-phone').value = '';
+    const note = document.createElement('div');
+    note.style.cssText = 'position:fixed;top:20px;left:50%;transform:translateX(-50%);background:var(--gold);color:#000;padding:10px 20px;border-radius:12px;font-size:12px;font-weight:600;z-index:300;max-width:360px;text-align:center;animation:fadeUp 0.3s ease-out;';
+    note.textContent = 'Session expired due to inactivity. Your data has been cleared for security.';
+    document.getElementById('app').appendChild(note);
+    setTimeout(() => note.remove(), 4000);
+  }, 900000); // 15 minutes
+}
+document.addEventListener('click', resetSessionTimer);
+document.addEventListener('keydown', resetSessionTimer);
+
+// Data protection wipe on page unload
+window.addEventListener('beforeunload', function() {
+  state.booking.fullName = ''; state.booking.passport = ''; state.booking.phone = '';
+  state.parcel = { name:'',weight:'',value:'',senderName:'',senderPhone:'',receiverName:'',receiverPhone:'',receiverCountry:'Zimbabwe' };
+});
+
+// Privacy policy modal
+function showPrivacy(e) {
+  if (e) e.preventDefault();
+  const modal = document.getElementById('modal-content');
+  modal.innerHTML = `
+    <button class="modal-close" onclick="closeModal()">&times;</button>
+    <div class="modal-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg></div>
+    <h3 style="font-size:16px">Data Protection & Privacy</h3>
+    <p class="sub" style="margin-bottom:12px">MR Lexars Cross Border Transportation</p>
+    <div class="privacy-box">
+      <strong>1. Data Collection & Purpose</strong><br>
+      We collect only the minimum personal data needed for booking (name, passport, phone) and parcel delivery (sender/receiver details). This data is processed solely for transportation services under South African POPIA, Botswana DPA, and Zimbabwean Cyber & Data Protection Act.
+      <br><br>
+      <strong>2. Encryption At Rest & In Transit</strong><br>
+      All personal data is encrypted using <strong>AES-256-GCM</strong> at rest and <strong>TLS 1.3</strong> in transit. Payment data never touches our servers — processed via PCI-DSS compliant gateways.
+      <br><br>
+      <strong>3. Data Minimization</strong><br>
+      We do not store passport images or copies. We retain booking records for 3 years (tax/immigration compliance), then permanently anonymize them.
+      <br><br>
+      <strong>4. Your Rights</strong><br>
+      You may request access, correction, deletion, or portability of your data at any time. Contact: <strong>privacy@mrlexar.co.za</strong>
+      <br><br>
+      <strong>5. Third-Party Sharing</strong><br>
+      Data is shared only with border immigration authorities as legally required. We never sell your data.
+      <br><br>
+      <strong>6. Session Management</strong><br>
+      Sessions auto-expire after 15 minutes of inactivity. All form data is cleared on session end, tab switch, or browser close.
+    </div>
+    <button class="btn-gold" onclick="closeModal()">I Understand</button>`;
+  document.getElementById('modal-overlay').style.display = 'flex';
+}
+
+function initMap() {
+  if (mapInitialized) return;
+
+  const mapEl = document.getElementById('leaflet-map');
+  if (!mapEl || mapEl.offsetHeight === 0) {
+    // Map container not visible yet — defer
+    setTimeout(initMap, 300);
+    return;
+  }
+
+  leafletMap = L.map('leaflet-map', {
+    center: [-22.0, 26.5],
+    zoom: 6,
+    zoomControl: false,
+    attributionControl: false,
+  });
+
+  L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
+    maxZoom: 18,
+  }).addTo(leafletMap);
+
+  // Gold zoom controls
+  L.control.zoom({ position: 'bottomright' }).addTo(leafletMap);
+
+  // Route polyline
+  const routeLatLngs = routeCoords.map(c => [c.lat, c.lng]);
+  const routeLine = L.polyline(routeLatLngs, {
+    color: '#D4AF37',
+    weight: 3,
+    opacity: 0.6,
+    dashArray: '8,6',
+  }).addTo(leafletMap);
+
+  // Animate a marker along the route
+  const animatedMarker = L.circleMarker(routeLatLngs[0], {
+    radius: 4,
+    color: '#D4AF37',
+    fillColor: '#D4AF37',
+    fillOpacity: 0.8,
+  }).addTo(leafletMap);
+
+  let step = 0;
+  setInterval(() => {
+    step = (step + 1) % (routeLatLngs.length * 10);
+    const progress = step / (routeLatLngs.length * 10);
+    const totalLen = routeLine._path.getTotalLength ? routeLine._path.getTotalLength() : 1;
+    if (routeLine._path && totalLen > 1) {
+      try {
+        const pt = routeLine._path.getPointAtLength((progress * totalLen) % totalLen);
+        animatedMarker.setLatLng([pt.y, pt.x]);
+      } catch(e) {}
+    }
+  }, 200);
+
+  // City markers
+  const goldIcon = L.divIcon({
+    className: 'custom-marker',
+    html: `<div style="width:14px;height:14px;background:#D4AF37;border:2px solid #fff;border-radius:50%;box-shadow:0 0 8px rgba(212,175,55,0.5);"></div>`,
+    iconSize: [14, 14],
+    iconAnchor: [7, 7],
+  });
+
+  routeCoords.forEach(c => {
+    L.marker([c.lat, c.lng], { icon: goldIcon })
+      .addTo(leafletMap)
+      .bindPopup(`<div style="text-align:center;font-weight:600;font-size:13px;color:#D4AF37">${c.name}</div>`);
+  });
+
+  // Vehicle markers
+  vehicleMarkers = [];
+  vehicleData.forEach((v, i) => {
+    const isPassenger = v.type === 'passenger';
+    const svg = isPassenger
+      ? '<svg width="24" height="24" viewBox="0 0 24 24"><rect x="4" y="6" width="16" height="12" rx="2" fill="#D4AF37"/><rect x="6" y="8" width="12" height="6" rx="1" fill="#0B0B0C"/><rect x="8" y="9" width="3" height="4" rx="0.5" fill="#D4AF37" opacity="0.5"/><rect x="13" y="9" width="3" height="4" rx="0.5" fill="#D4AF37" opacity="0.5"/><rect x="10" y="4" width="4" height="3" rx="1" fill="#D4AF37"/><circle cx="8" cy="18" r="2.5" fill="#D4AF37"/><circle cx="16" cy="18" r="2.5" fill="#D4AF37"/></svg>'
+      : '<svg width="24" height="24" viewBox="0 0 24 24"><rect x="5" y="7" width="14" height="12" rx="2" fill="#D4AF37"/><rect x="5" y="7" width="14" height="4" rx="1" fill="#B8962F"/><line x1="12" y1="7" x2="12" y2="19" stroke="#0B0B0C" stroke-width="1.5"/><line x1="5" y1="13" x2="19" y2="13" stroke="#0B0B0C" stroke-width="0.8" opacity="0.4"/></svg>';
+
+    const vehicleIcon = L.divIcon({
+      className: 'vehicle-marker',
+      html: `<div style="position:relative;width:36px;height:36px;">
+        <div style="position:absolute;inset:0;border-radius:50%;border:2px solid #D4AF37;animation:pulseGlow 2s ease-in-out infinite;box-shadow:0 0 12px rgba(212,175,55,0.4);"></div>
+        <div style="position:absolute;inset:4px;border-radius:50%;background:rgba(212,175,55,0.15);display:flex;align-items:center;justify-content:center;">${svg}</div>
+      </div>`,
+      iconSize: [36, 36],
+      iconAnchor: [18, 18],
+    });
+
+    const marker = L.marker([v.lat, v.lng], { icon: vehicleIcon })
+      .addTo(leafletMap)
+      .bindPopup(`
+        <div style="min-width:160px">
+          <div style="font-weight:600;font-size:14px;color:#D4AF37;margin-bottom:4px">${v.label}</div>
+          <div style="display:flex;align-items:center;gap:4px;font-size:11px;color:#4ade80;margin-bottom:8px">
+            <span style="width:6px;height:6px;border-radius:50%;background:#4ade80;display:inline-block;animation:pulse 1.5s infinite"></span>
+            ${v.status}
+          </div>
+          <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:4px;font-size:11px">
+            <div style="background:#0B0B0C;border-radius:8px;padding:6px;text-align:center"><span style="color:rgba(255,255,255,0.4);display:block">Speed</span><span style="color:#D4AF37;font-weight:600">${v.speed}</span></div>
+            <div style="background:#0B0B0C;border-radius:8px;padding:6px;text-align:center"><span style="color:rgba(255,255,255,0.4);display:block">ETA</span><span style="color:#D4AF37;font-weight:600;font-size:10px">${v.eta}</span></div>
+            <div style="background:#0B0B0C;border-radius:8px;padding:6px;text-align:center"><span style="color:rgba(255,255,255,0.4);display:block">Status</span><span style="color:#4ade80;font-weight:600;font-size:10px">${v.status.split(' ')[0]}</span></div>
+          </div>
+        </div>
+      `);
+    vehicleMarkers.push(marker);
+  });
+
+  mapInitialized = true;
+}
+
+function closeVehiclePopup() {
+  document.getElementById('vehicle-popup').style.display = 'none';
+  state.selectedVehicle = null;
+}
+
+// ===== POLICE AHEAD FEATURE =====
+state.reports = [];
+state.checklist = {
+  docs: [
+    { id:'passport', label:'Passport / Travel Document', done:false },
+    { id:'visa', label:'Visa (if required)', done:false },
+    { id:'vehicle-reg', label:'Vehicle Registration', done:false },
+    { id:'insurance', label:'Cross-Border Insurance (COI)', done:false },
+    { id:'zim-toll', label:'Zim Toll / Carbon Tax Receipt', done:false },
+  ]
+};
+let policeMarker = null;
+let alertTimeout = null;
+
+function openReportCard() {
+  document.getElementById('report-card').style.display = 'block';
+}
+
+function closeReportCard() {
+  document.getElementById('report-card').style.display = 'none';
+}
+
+function getDistance(lat1, lng1, lat2, lng2) {
+  const R = 6371;
+  const dLat = (lat2 - lat1) * Math.PI / 180;
+  const dLng = (lng2 - lng1) * Math.PI / 180;
+  const a = Math.sin(dLat/2)*Math.sin(dLat/2) + Math.cos(lat1*Math.PI/180)*Math.cos(lat2*Math.PI/180)*Math.sin(dLng/2)*Math.sin(dLng/2);
+  return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+}
+
+function submitReport() {
+  const type = document.getElementById('report-type').value;
+  const severity = document.getElementById('report-severity').value;
+  const locName = document.getElementById('report-type').selectedOptions[0].text;
+
+  // Find a location along the route based on vehicle positions
+  let lat, lng;
+  if (state.selectedVehicle) {
+    lat = state.selectedVehicle.lat;
+    lng = state.selectedVehicle.lng;
+  } else {
+    // Use closest city to a random vehicle
+    const v = vehicleData[Math.floor(Math.random() * vehicleData.length)];
+    lat = v.lat + (Math.random() - 0.5) * 0.1;
+    lng = v.lng + (Math.random() - 0.5) * 0.1;
+  }
+
+  state.reports.push({ type, severity, lat, lng, time: Date.now(), locName });
+  closeReportCard();
+
+  // Add marker on map
+  if (leafletMap) {
+    if (policeMarker) leafletMap.removeLayer(policeMarker);
+    const shieldSvg = '<svg width="28" height="28" viewBox="0 0 24 24" fill="none"><path d="M12 2l2 7h7l-5.5 4.5L18 21l-6-3.5L6 21l2.5-7.5L3 9h7z" fill="#D4AF37" stroke="#D4AF37" stroke-width="1"/><circle cx="12" cy="11.5" r="3" fill="#0B0B0C"/></svg>';
+    const markerHtml = '<div style="position:relative;width:40px;height:40px;"><div style="position:absolute;inset:0;border-radius:50%;background:rgba(212,175,55,0.2);border:2px solid #D4AF37;box-shadow:0 0 16px rgba(212,175,55,0.5);animation:pulseGlow 1.5s ease-in-out infinite;"></div><div style="position:absolute;inset:2px;display:flex;align-items:center;justify-content:center;">' + shieldSvg + '</div></div>';
+    const reportIcon = L.divIcon({ className:'', html: markerHtml, iconSize:[40,40], iconAnchor:[20,20] });
+    policeMarker = L.marker([lat, lng], { icon: reportIcon }).addTo(leafletMap);
+    const sevLabel = { low:'Low', medium:'Medium', high:'High' };
+    policeMarker.bindPopup('<div style="text-align:center;min-width:140px"><div style="color:#D4AF37;font-weight:600;font-size:14px;margin-bottom:4px">' + locName + '</div><div style="font-size:11px;color:#ffcc00">Severity: ' + sevLabel[severity] + '</div><div style="font-size:11px;color:rgba(255,255,255,0.4);margin-top:4px">' + new Date().toLocaleTimeString() + '</div></div>').openPopup();
+  }
+
+  // Trigger alert banner
+  showAlertBanner(type, severity);
+}
+
+function showAlertBanner(type, severity) {
+  const banner = document.getElementById('alert-banner');
+  const typeLabels = { police:'Police Checkpoint Ahead', accident:'Accident Reported Ahead', roadworks:'Roadworks Ahead', customs:'Border Delay Reported' };
+  const sevText = { low:'Brief stop expected', medium:'Expect 10–30 min delay', high:'Expect 30+ min delay' };
+  const title = typeLabels[type] || 'Delay Ahead';
+  const sub = sevText[severity] || 'Proceed with caution';
+  banner.style.display = 'block';
+  banner.innerHTML = '<div class="alert-banner"><div style="display:flex;align-items:flex-start;gap:8px"><div style="flex:1" onclick="openChecklist()"><div class="alert-title"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#D4AF37" stroke-width="2"><path d="M12 2l2 7h7l-5.5 4.5L18 21l-6-3.5L6 21l2.5-7.5L3 9h7z"/><circle cx="12" cy="12" r="3" fill="currentColor"/></svg>' + title + '</div><div class="alert-sub">' + sub + ' — Tap for Document Checklist</div></div><button onclick="dismissAlert()" style="background:none;border:none;color:rgba(255,255,255,0.4);cursor:pointer;font-size:16px;line-height:1;padding:2px">&times;</button></div></div>';
+  if (alertTimeout) clearTimeout(alertTimeout);
+  alertTimeout = setTimeout(dismissAlert, 15000);
+}
+
+function dismissAlert() {
+  document.getElementById('alert-banner').style.display = 'none';
+  if (alertTimeout) clearTimeout(alertTimeout);
+}
+
+function openChecklist() {
+  dismissAlert();
+  const panel = document.getElementById('checklist-panel');
+  const typeLabel = document.getElementById('report-type') ? document.getElementById('report-type').selectedOptions[0].text : 'Checkpoint';
+  renderChecklist(typeLabel);
+  panel.style.display = 'block';
+}
+
+function renderChecklist(locationName) {
+  const panel = document.getElementById('checklist-panel');
+  const done = state.checklist.docs.filter(d => d.done).length;
+  const total = state.checklist.docs.length;
+  const pct = Math.round((done / total) * 100);
+  let items = '';
+  state.checklist.docs.forEach((d, i) => {
+    items += '<div class="check-item" onclick="toggleCheck(' + i + ')"><div class="box' + (d.done?' checked':'') + '"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg></div><span class="label' + (d.done?' done':'') + '">' + d.label + '</span></div>';
+  });
+  panel.innerHTML = '<button class="modal-close" onclick="closeChecklist()">&times;</button><h3>Document Readiness</h3><div class="loc">' + locationName + '</div><div class="progress-bar"><div class="fill" style="width:' + pct + '%"></div></div>' + items + (pct===100?'<div class="checklist-ready">All documents ready ✓</div>':'');
+}
+
+function toggleCheck(idx) {
+  state.checklist.docs[idx].done = !state.checklist.docs[idx].done;
+  const typeLabel = document.getElementById('report-type') ? document.getElementById('report-type').selectedOptions[0].text : 'Checkpoint';
+  renderChecklist(typeLabel);
+}
+
+function closeChecklist() {
+  document.getElementById('checklist-panel').style.display = 'none';
+}
+
+// ===== FEATURE 1: DRIVER PROFILE =====
+const drivers = [
+  { name: 'Alexio Usuwenyu', rating: 4.9, trips: 156, languages: 'English • Shona • Ndebele', experience: '8 years • 1,500+ trips', badge: 'Owner-Operator' },
+  { name: 'Aaron Muringanwa', rating: 4.8, trips: 98, languages: 'English • Shona', experience: '5 years • 980+ trips', badge: 'Senior Driver' },
+  { name: 'Tendai Muringanwa', rating: 4.9, trips: 134, languages: 'English • Shona • Setswana', experience: '7 years • 1,340+ trips', badge: 'Cross-Border Specialist' },
+  { name: 'Stanely Mhlanga', rating: 4.7, trips: 82, languages: 'English • Ndebele • Shona', experience: '4 years • 820+ trips', badge: 'Route Expert' },
+  { name: 'Tafadzwa Mudzamiri', rating: 4.8, trips: 112, languages: 'English • Shona', experience: '6 years • 1,120+ trips', badge: 'Safety Champion' },
+  { name: 'Ambrose Mukute', rating: 4.9, trips: 203, languages: 'English • Shona • Ndebele • Portugues', experience: '10 years • 2,000+ trips', badge: 'Veteran Driver' },
+];
+
+function renderDriverCard() {
+  const container = document.getElementById('driver-card-container');
+  if (!container) return;
+  let html = '<div style="margin:0 16px"><h4 style="font-size:11px;font-weight:600;color:var(--gold);text-transform:uppercase;letter-spacing:1px;margin:12px 0 8px">Your Driver</h4>';
+  html += '<div class="driver-grid">';
+  drivers.forEach((d, i) => {
+    html += `
+      <div class="driver-card" onclick="showDriverProfile(${i})">
+        <div class="driver-avatar">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#D4AF37" stroke-width="1.5"><circle cx="12" cy="8" r="4"/><path d="M4 22c0-4 3.6-8 8-8s8 4 8 8"/></svg>
+        </div>
+        <div class="driver-info">
+          <div class="driver-name">${d.name}</div>
+          <div class="driver-rating">⭐ ${d.rating} (${d.trips})</div>
+        </div>
+      </div>`;
+  });
+  html += '</div></div>';
+  container.innerHTML = html;
+}
+
+function showDriverProfile(idx) {
+  const overlay = document.getElementById('modal-overlay');
+  const modal = document.getElementById('modal-content');
+  const d = drivers[idx];
+  modal.innerHTML = `
+    <button class="modal-close" onclick="closeModal()">&times;</button>
+    <div style="display:flex;flex-direction:column;align-items:center;padding:8px 0 16px">
+      <div style="width:72px;height:72px;border-radius:50%;background:linear-gradient(135deg,rgba(212,175,55,0.3),rgba(212,175,55,0.1));border:2px solid rgba(212,175,55,0.5);display:flex;align-items:center;justify-content:center;margin-bottom:10px">
+        <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="#D4AF37" stroke-width="1.5"><circle cx="12" cy="8" r="4"/><path d="M4 22c0-4 3.6-8 8-8s8 4 8 8"/></svg>
+      </div>
+      <h3 style="font-size:16px;font-weight:700;color:#fff">${d.name}</h3>
+      <div style="display:flex;align-items:center;gap:4px;font-size:12px;color:var(--gold);margin:4px 0">⭐ ${d.rating} • ${d.trips} trips</div>
+      <div style="font-size:11px;color:var(--text-dim);margin:2px 0">${d.languages}</div>
+      <div style="display:flex;align-items:center;gap:6px;margin-top:8px;background:rgba(212,175,55,0.1);padding:6px 16px;border-radius:999px;border:1px solid rgba(212,175,55,0.2)">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--gold)" stroke-width="2"><path d="M12 2l2 7h7l-5.5 4.5L18 21l-6-3.5L6 21l2.5-7.5L3 9h7z"/><circle cx="12" cy="12" r="3"/></svg>
+        <span style="font-size:11px;font-weight:600;color:var(--gold)">${d.badge}</span>
+      </div>
+    </div>
+    <div style="padding:12px;border-radius:12px;background:var(--dark);border:1px solid var(--border);margin-bottom:12px">
+      <div style="font-size:11px;color:var(--text-dim);margin-bottom:4px">Experience</div>
+      <div style="font-size:13px;font-weight:500;color:#fff">${d.experience}</div>
+    </div>
+    <div style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:12px">
+      <span class="badge"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg>License Verified</span>
+      <span class="badge"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg>Permit Active</span>
+      <span class="badge"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg>Insurance Valid</span>
+    </div>
+    <button class="btn-gold" onclick="closeModal()">Close</button>`;
+  overlay.style.display = 'flex';
+}
+
+// ===== FEATURE 2: FAMILY TRACKING =====
+function renderFamilyTracking() {
+  const container = document.getElementById('family-tracking');
+  if (!container) return;
+  const ft = state.familyTracking;
+  container.innerHTML = `
+    <div class="fam-card">
+      <h4 style="font-size:12px;font-weight:600;color:#fff;display:flex;align-items:center;gap:6px;margin-bottom:8px">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--gold)" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+        Share trip with family?
+      </h4>
+      <div class="fam-toggle" onclick="toggleFamily()">
+        <span style="font-size:11px;color:var(--text-dim)">Yes, send them live tracking</span>
+        <div class="track${ft.enabled?' on':''}"><div class="thumb"></div></div>
+      </div>
+      ${ft.enabled && !ft.sent ? `
+        <input type="tel" id="fam-phone" placeholder="Family member's WhatsApp number" value="${ft.phone}" oninput="state.familyTracking.phone=this.value" style="width:100%;margin-top:10px;padding:10px;border-radius:10px;background:var(--dark);border:1px solid var(--border);color:#fff;font-size:12px;outline:none">
+        <p style="font-size:9px;color:var(--text-dim);margin:6px 0">They'll get a link to track your vehicle, see border crossings, and get arrival alerts. No app needed.</p>
+        <button class="btn-gold" style="padding:8px;font-size:12px" onclick="sendFamilyLink()">📱 Send Link</button>
+      ` : ''}
+      ${ft.sent ? `<div class="fam-sent">📱 Tracking link sent to ${ft.phone}</div>` : ''}
+    </div>`;
+}
+
+function toggleFamily() {
+  state.familyTracking.enabled = !state.familyTracking.enabled;
+  renderFamilyTracking();
+}
+
+function sendFamilyLink() {
+  const phone = document.getElementById('fam-phone');
+  if (phone && phone.value.length >= 8) {
+    state.familyTracking.phone = phone.value;
+    state.familyTracking.sent = true;
+    renderFamilyTracking();
+  }
+}
+
+// ===== FEATURE 3: SOS =====
+function showSOSConfirm() {
+  const overlay = document.getElementById('sos-overlay');
+  overlay.style.display = 'flex';
+  overlay.innerHTML = `
+    <div class="sos-card">
+      <h3 style="color:#dc2626">Send Emergency Alert?</h3>
+      <p class="sub">Your live GPS location will be shared with MR Lexars HQ and your emergency contact.</p>
+      <div style="display:flex;gap:10px">
+        <button style="flex:1;padding:12px;border-radius:16px;background:var(--border);color:rgba(255,255,255,0.7);border:none;font-weight:600;font-size:13px;cursor:pointer" onclick="closeSOS()">Cancel</button>
+        <button style="flex:1;padding:12px;border-radius:16px;background:#dc2626;color:#fff;border:none;font-weight:700;font-size:13px;cursor:pointer" onclick="sendSOS()">Send Alert</button>
+      </div>
+    </div>`;
+}
+
+function closeSOS() {
+  document.getElementById('sos-overlay').style.display = 'none';
+}
+
+async function sendSOS() {
+  let numbers = { Zimbabwe: '999', Botswana: '999', 'South Africa': '10111' };
+  try {
+    const result = await api('/sos', { method: 'POST', body: JSON.stringify({ silent: false }) });
+    numbers = result.policeNumbers || numbers;
+  } catch (e) {}
+  const overlay = document.getElementById('sos-overlay');
+  overlay.innerHTML = `
+    <div class="sos-card done">
+      <div style="display:flex;flex-direction:column;align-items:center;margin-bottom:16px">
+        <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="#4ade80" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="16 8 10 16 7 13"/></svg>
+        <h3 style="color:#4ade80;margin-top:8px">Alert Sent</h3>
+        <p class="sub">Help is on the way. Stay calm.</p>
+      </div>
+      <div class="sos-step"><div class="check"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg></div>GPS coordinates locked</div>
+      <div class="sos-step"><div class="check"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg></div>MR Lexars HQ notified</div>
+      <div class="sos-step"><div class="check"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg></div>Emergency contact notified</div>
+      <div class="sos-step"><div class="check"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg></div>Driver alerted discreetly</div>
+      <div class="police-list">
+        <div style="font-size:10px;color:var(--text-dim);margin-bottom:4px">If in immediate danger, call:</div>
+        <div class="row"><span>Zimbabwe</span><span style="color:var(--gold);font-weight:700">${numbers.Zimbabwe || '999'}</span></div>
+        <div class="row"><span>Botswana</span><span style="color:var(--gold);font-weight:700">${numbers.Botswana || '999'}</span></div>
+        <div class="row"><span>South Africa</span><span style="color:var(--gold);font-weight:700">${numbers['South Africa'] || '10111'}</span></div>
+      </div>
+      <button class="btn-gold" onclick="confirmSOS()">I Understand</button>
+    </div>`;
+}
+
+function confirmSOS() {
+  state.sosActive = true;
+  document.getElementById('sos-overlay').style.display = 'none';
+  document.getElementById('sos-circle').className = 'circle active';
+  document.getElementById('sos-label').textContent = 'Active';
+  document.getElementById('sos-label').style.color = '#fca5a5';
+}
+
+// Silent Alarm
+function triggerSilentAlarm() {
+  const overlay = document.getElementById('modal-overlay');
+  const modal = document.getElementById('modal-content');
+  modal.innerHTML = `
+    <button class="modal-close" onclick="closeModal()">&times;</button>
+    <div style="display:flex;align-items:center;gap:8px;margin-bottom:12px">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#dc2626" stroke-width="2"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+      <h3 style="font-size:15px;font-weight:700;color:#dc2626">Trigger Silent Alarm?</h3>
+    </div>
+    <p style="font-size:11px;color:var(--text-dim);margin-bottom:12px">A priority alert will be sent to MR Lexars HQ with your vehicle GPS, driver name, and timestamp.</p>
+    <div style="display:flex;gap:10px">
+      <button style="flex:1;padding:10px;border-radius:14px;background:var(--border);color:rgba(255,255,255,0.7);border:none;font-size:12px;font-weight:600;cursor:pointer" onclick="closeModal()">Cancel</button>
+      <button style="flex:1;padding:10px;border-radius:14px;background:#dc2626;color:#fff;border:none;font-size:12px;font-weight:700;cursor:pointer" onclick="confirmSilentAlarm()">Send Silent Alarm</button>
+    </div>`;
+  overlay.style.display = 'flex';
+}
+
+async function confirmSilentAlarm() {
+  try { await api('/sos', { method: 'POST', body: JSON.stringify({ silent: true }) }); } catch (e) {}
+  state.silentAlarmSent = true;
+  closeModal();
+  showConfirmBanner('Silent alarm sent. HQ tracking your position.');
+}
+
+function showConfirmBanner(msg) {
+  const b = document.createElement('div');
+  b.style.cssText = 'position:fixed;bottom:100px;left:50%;transform:translateX(-50%);background:rgba(74,222,128,0.15);border:1px solid rgba(74,222,128,0.3);color:#4ade80;padding:10px 16px;border-radius:12px;font-size:11px;font-weight:500;z-index:80;max-width:360px;text-align:center;animation:fadeUp 0.3s';
+  b.textContent = msg;
+  document.getElementById('app').appendChild(b);
+  setTimeout(() => b.remove(), 4000);
+}
+
+// Update SOS visibility based on active trip/parcel
+function updateSOS() {
+  const btn = document.getElementById('sos-btn');
+  if (state.hasActiveTrip || state.hasActiveParcel) {
+    btn.style.display = 'flex';
+  } else {
+    btn.style.display = 'none';
+  }
+}
+
+// ===== FEATURE 4: CHAIN OF CUSTODY TIMELINE =====
+const parcelTimeline = [
+  { label:'Collected from sender', detail:'📍 Johannesburg, 45 Main Street. Photo attached.', status:'done', time:'08:15 AM', photo:true },
+  { label:'Departed MR Lexars JHB depot', detail:'Loaded onto MR Lexars 3. Driver: Tawanda M.', status:'done', time:'11:30 AM' },
+  { label:'At Groblersbrug border (SA side)', detail:'Awaiting customs clearance. Estimated wait: 45 min.', status:'active', time:'03:45 PM' },
+  { label:'Clear Botswana customs (Expected)', detail:'Botswana customs clearance procedure.', status:'pending', time:'05:30 PM' },
+  { label:'In transit to Francistown (Expected)', detail:'Estimated driving time: 2.5 hours.', status:'pending', time:'06:30 PM' },
+  { label:'Arrive Francistown depot (Expected)', detail:'Scheduled arrival at Francistown sorting facility.', status:'pending', time:'10:00 PM' },
+  { label:'Out for delivery (Expected)', detail:'Local courier will deliver to recipient.', status:'pending', time:'Tomorrow 08:00 AM' },
+  { label:'Delivered to recipient (Expected)', detail:'✅ Recipient: Farai M. • Signature captured • Delivery photo attached.', status:'pending', time:'Tomorrow 10:00 AM', photo:true },
+];
+
+let timelineExpanded = null;
+
+function renderTimeline(containerId) {
+  const container = document.getElementById(containerId);
+  if (!container) return;
+  let html = '<div class="timeline">';
+  parcelTimeline.forEach((s, i) => {
+    const dotClass = s.status === 'done' ? 'green' : s.status === 'active' ? 'yellow' : 'grey';
+    const textClass = s.status;
+    const isExpanded = timelineExpanded === i;
+    html += `
+      <div class="tl-step" onclick="toggleTimeline(${i})">
+        <div class="dot ${dotClass}"></div>
+        <div class="time-label ${textClass}">${s.time} – ${s.label}</div>
+        ${isExpanded ? `<div class="tl-detail">${s.detail}${s.photo ? '<br><a href="#" style="color:var(--gold);text-decoration:none" onclick="event.stopPropagation()">📷 View Photo</a>' : ''}</div>` : ''}
+      </div>`;
+  });
+  html += '</div>';
+  container.innerHTML = html;
+}
+
+function toggleTimeline(idx) {
+  timelineExpanded = timelineExpanded === idx ? null : idx;
+  renderTimeline('parcel-timeline');
+}
+
+// ===== FEATURE 5: PROFILE / LOYALTY / REFERRAL =====
+async function renderProfile() {
+  try {
+    const [loy, refs] = await Promise.all([
+      api('/profile/loyalty'),
+      api('/profile/referrals'),
+    ]);
+    state.loyalty.trips = loy.trips;
+    state.loyalty.goldTier = loy.goldTier;
+    state.referral.code = refs.code;
+    state.referral.balance = refs.balance;
+    state.referral.referrals = refs.referrals;
+  } catch (e) {}
+  const container = document.getElementById('profile-content');
+  const { loyalty, referral, parcelHistory, offlineMode } = state;
+  const progress = Math.min((loyalty.trips / 5) * 100, 100);
+
+  let parcelsHtml = '';
+  if (parcelHistory.length > 0) {
+    parcelsHtml = parcelHistory.map(p => {
+      const last3 = p.timeline.slice(-3);
+      return `<div class="parcel-mini">
+        <div style="display:flex;justify-content:space-between;margin-bottom:4px">
+          <span style="font-size:11px;color:var(--gold);font-weight:700">${p.id}</span>
+          <span style="font-size:9px;color:var(--text-dim)">${p.timestamp}</span>
+        </div>
+        <div style="font-size:9px;color:var(--text-dim);margin-bottom:6px">${p.details.name}</div>
+        ${last3.map(s => `<div class="mini-step"><span class="mini-dot" style="background:${s.done?'#4ade80':s.status==='active'?'#eab308':'var(--border)'}"></span><span style="color:var(--text-dim)">${s.stage || s.label || ''}</span></div>`).join('')}
+      </div>`;
+    }).join('');
+  } else {
+    parcelsHtml = '<p style="font-size:11px;color:var(--text-dim);padding:8px 0">No parcels yet.</p>';
+  }
+
+  container.innerHTML = `
+    <div class="profile-header">
+      <div class="profile-avatar">
+        <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="#D4AF37" stroke-width="1.5"><circle cx="12" cy="8" r="4"/><path d="M4 22c0-4 3.6-8 8-8s8 4 8 8"/></svg>
+      </div>
+      <div>
+        <div style="display:flex;align-items:center;gap:8px">
+          <h2 style="font-size:16px;font-weight:700;color:#fff">${(currentUser && currentUser.name) || 'Tendai M.'}</h2>
+          ${loyalty.goldTier ? '<span class="gold-badge">GOLD</span>' : ''}
+        </div>
+        <p style="font-size:11px;color:var(--text-dim);margin-top:2px">${(currentUser && currentUser.phone) || '+27 71 077 9990'}</p>
+      </div>
+    </div>
+
+    <!-- Loyalty -->
+    <div class="rewards-card" style="margin:0 16px">
+      <h3><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="8" r="6"/><path d="M15.477 12.89L17 22l-5-3-5 3 1.523-9.11"/></svg>MR Lexars Rewards</h3>
+      <div style="display:flex;justify-content:space-between;font-size:11px">
+        <span style="color:var(--text-dim)">You've completed ${loyalty.trips} trips.</span>
+        ${loyalty.goldTier ? '<span style="color:#4ade80;font-weight:600">✅ Gold Tier Active</span>' : `<span style="color:var(--text-dim)">${5-loyalty.trips} more to Gold</span>`}
+      </div>
+      <div class="progress-track"><div class="fill${loyalty.goldTier?' gold':''}" style="width:${progress}%"></div></div>
+      ${loyalty.goldTier
+        ? '<div style="padding:10px;border-radius:10px;background:rgba(212,175,55,0.1);border:1px solid rgba(212,175,55,0.3);text-align:center;font-size:11px;color:var(--gold);font-weight:600">🥇 GOLD TIER UNLOCKED — 10% off all future bookings!</div>'
+        : '<span style="font-size:9px;color:var(--text-dim)">1 more trip to unlock Gold Tier – 10% off all future bookings!</span>'
+      }
+    </div>
+
+    <!-- Referral -->
+    <div class="rewards-card" style="margin:0 16px">
+      <h3><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>Refer Friends, Earn Credit</h3>
+      <p style="font-size:9px;color:var(--text-dim);margin-bottom:8px">You and your friend both get $5 credit when they complete their first trip.</p>
+      <div class="referral-card">
+        <code>${referral.code}</code>
+        <div style="display:flex;gap:6px">
+          <button class="ref-btn" style="background:rgba(212,175,55,0.2);color:var(--gold);border:none" onclick="copyRefCode()">📋 Copy</button>
+          <button class="ref-btn" style="background:rgba(74,222,128,0.15);color:#4ade80;border:none">📱 Share</button>
+        </div>
+      </div>
+      <div class="whatsapp-preview">
+        <span style="color:rgba(255,255,255,0.3)">WhatsApp Preview:</span><br>
+        Hey! I use MR Lexars for safe cross-border trips between SA, Botswana & Zimbabwe. Use my code <b style="color:var(--gold)">${referral.code}</b> and get $5 off your first trip. 🚐🇿🇦🇧🇼🇿🇼
+      </div>
+      <div style="font-size:11px;color:var(--text-dim);margin:8px 0 4px">Your Referrals</div>
+      ${referral.referrals && referral.referrals.length > 0
+        ? referral.referrals.map(r => `<div style="display:flex;justify-content:space-between;padding:6px 0;border-bottom:1px solid var(--border);font-size:11px">
+        <span style="color:rgba(255,255,255,0.65)">${r.name}</span>
+        <span style="color:${r.status==='completed'?'#4ade80':'#eab308'}">${r.status==='completed'?'$5 credit earned':'Pending first trip'}</span>
+      </div>`).join('')
+        : '<p style="font-size:11px;color:var(--text-dim);padding:4px 0">No referrals yet. Share your code above!</p>'
+      }
+      <div style="padding:10px;border-radius:10px;background:rgba(212,175,55,0.1);border:1px solid rgba(212,175,55,0.2);margin-top:8px;display:flex;justify-content:space-between;font-size:12px">
+        <span style="color:var(--text-dim)">Referral Balance</span>
+        <span style="color:var(--gold);font-weight:700">$${referral.balance.toFixed(2)} available</span>
+      </div>
+      <p style="font-size:9px;color:var(--text-dim);margin-top:4px">Redeem on next booking</p>
+    </div>
+
+    <!-- My Parcels -->
+    <div class="rewards-card" style="margin:0 16px">
+      <h3><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M16.5 9.4 7.55 4.24"/><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/><polyline points="3.29 7 12 12 20.71 7"/><line x1="12" y1="22" x2="12" y2="12"/></svg>My Parcels</h3>
+      ${parcelsHtml}
+    </div>
+
+    <!-- Settings / Offline -->
+    <div class="rewards-card" style="margin:0 16px">
+      <h3><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>Settings</h3>
+      <div class="setting-row">
+        <span class="label">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="${offlineMode?'#eab308':'#4ade80'}" stroke-width="2"><path d="M5 12.55a11 11 0 0 1 14.08 0"/><path d="M1.42 9a16 16 0 0 1 21.16 0"/><path d="M8.53 16.11a6 6 0 0 1 6.95 0"/><line x1="12" y1="20" x2="12.01" y2="20"/></svg>
+          Simulate Offline Mode
+        </span>
+        <div class="toggle${offlineMode?' on':''}" onclick="toggleOffline()"><div class="knob"></div></div>
+      </div>
+      ${offlineMode ? '<div style="padding:8px;border-radius:8px;background:var(--dark);border:1px solid var(--border)"><span style="font-size:10px;color:#eab308">Offline mode active. Essential features available.</span></div>' : ''}
+    </div>
+
+    <!-- Support -->
+    <div class="rewards-card" style="margin:0 16px 24px">
+      <h3 style="font-size:10px;text-transform:uppercase;letter-spacing:1px;color:rgba(255,255,255,0.4);font-weight:600">Support</h3>
+      <div style="display:flex;flex-direction:column;gap:6px;font-size:11px">
+        <a href="tel:+27710779990" style="display:flex;align-items:center;gap:8px;color:var(--text-dim);text-decoration:none"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--gold)" stroke-width="2"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"/></svg>+27 71 077 9990 (SA / Botswana)</a>
+        <a href="tel:+263779751069" style="display:flex;align-items:center;gap:8px;color:var(--text-dim);text-decoration:none"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--gold)" stroke-width="2"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"/></svg>+263 77 975 1069 (Zimbabwe)</a>
+        <a href="mailto:alexiousuwenyu@gmail.com" style="display:flex;align-items:center;gap:8px;color:var(--text-dim);text-decoration:none"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--gold)" stroke-width="2"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg>alexiousuwenyu@gmail.com</a>
+      </div>
+    </div>`;
+}
+
+function toggleOffline() {
+  state.offlineMode = !state.offlineMode;
+  const banner = document.getElementById('offline-banner');
+  if (state.offlineMode) {
+    banner.style.display = 'flex';
+  } else {
+    banner.style.display = 'none';
+  }
+  renderProfile();
+}
+
+function dismissOffline() {
+  state.offlineMode = false;
+  document.getElementById('offline-banner').style.display = 'none';
+  renderProfile();
+}
+
+function copyRefCode() {
+  navigator.clipboard.writeText(state.referral.code).then(() => {
+    showConfirmBanner('Referral code copied!');
+  }).catch(() => {});
+}
+
+// ===== FEATURE 2b: FAMILY VIEW ON MAP =====
+function toggleFamilyView() {
+  state.familyView = !state.familyView;
+  const card = document.getElementById('family-view-card');
+  if (state.familyView) {
+    card.style.display = 'block';
+  } else {
+    card.style.display = 'none';
+  }
+}
+
+// ===== FEATURE 6: OFFLINE MODE INDICATORS =====
+function initOffline() {
+  const famBtn = document.getElementById('fam-view-btn');
+  if (famBtn) {
+    famBtn.style.display = state.familyView ? 'inline-flex' : 'none';
+  }
+}
+
+// ===== UPDATE BOOKING FUNCTIONS TO INCLUDE DRIVER + FAMILY =====
+window.handleBook = async function() {
+  if (!state.booking.pickup || !state.booking.dropoff || !state.booking.fullName) return;
+  const b = state.booking;
+  try {
+    const result = await api('/bookings', {
+      method: 'POST',
+      body: JSON.stringify({
+        pickup: b.pickup, dropoff: b.dropoff, date: b.date,
+        passengerName: b.fullName, passport: b.passport, phone: b.phone,
+      }),
+    });
+    state.ticket = { id: result.id, vehicle: result.vehicle };
+    state.hasActiveTrip = true;
+    state.loyalty.trips = result.loyaltyTrips;
+    if (result.goldTierUnlocked) state.loyalty.goldTier = true;
+  } catch (e) {
+    const id = 'MLX-B-' + Date.now().toString(36).toUpperCase();
+    state.ticket = { id, vehicle: 'MR Lexars Shuttle' };
+    state.hasActiveTrip = true;
+    state.loyalty.trips = (state.loyalty.trips || 0) + 1;
+  }
+  updateSOS();
+  renderBookingModal();
+  sendWhatsApp('New Booking - ' + b.fullName + ' - ' + b.pickup + ' to ' + b.dropoff + ' on ' + b.date + '. Ticket: ' + state.ticket.id);
+};
+
+function renderBookingModal() {
+  const overlay = document.getElementById('modal-overlay');
+  const modal = document.getElementById('modal-content');
+  const t = state.ticket;
+  const b = state.booking;
+  const ft = state.familyTracking;
+  if (!t) return;
+  modal.innerHTML = `
+    <button class="modal-close" onclick="closeModal();state.showSuccessModal=false">&times;</button>
+    <div style="display:flex;flex-direction:column;align-items-center">
+      <div style="width:56px;height:56px;border-radius:50%;background:rgba(212,175,55,0.2);display:flex;align-items:center;justify-content:center;margin-bottom:12px">
+        <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="var(--gold)" stroke-width="2"><polyline points="20 6 9 17 4 12"/></svg>
+      </div>
+      <h3 style="font-size:18px;font-weight:700;color:var(--gold);margin-bottom:4px">Booking Confirmed!</h3>
+      <p style="font-size:11px;color:var(--text-dim);margin-bottom:16px">Your digital ticket is ready</p>
+      <div style="width:100%;background:var(--dark);border:1px solid var(--border);border-radius:16px;padding:16px;margin-bottom:12px">
+        <div style="display:flex;justify-content:center;margin-bottom:10px">
+          <div style="width:80px;height:80px;background:rgba(255,255,255,0.03);border-radius:12px;display:flex;align-items:center;justify-content:center;border:1px dashed rgba(255,255,255,0.08)">
+            <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="var(--gold)" stroke-width="1.5"><rect x="2" y="4" width="20" height="16" rx="2"/><line x1="8" y1="10" x2="16" y2="10"/><line x1="8" y1="14" x2="14" y2="14"/></svg>
+          </div>
+        </div>
+        <div style="font-size:12px;display:flex;flex-direction:column;gap:4px">
+          <div style="display:flex;justify-content:between"><span style="color:var(--text-dim)">Ticket</span><span style="color:#fff">${t.id}</span></div>
+          <div style="display:flex;justify-content:between"><span style="color:var(--text-dim)">Passenger</span><span style="color:#fff">${b.fullName}</span></div>
+          <div style="display:flex;justify-content:between"><span style="color:var(--text-dim)">Route</span><span style="color:#fff">${b.pickup} → ${b.dropoff}</span></div>
+        </div>
+      </div>
+      <div id="family-tracking"></div>
+      <div style="display:flex;gap:8px;margin-top:8px">
+        <button class="btn-gold" onclick="closeModal();state.showSuccessModal=false" style="flex:1">Done</button>
+        <button class="btn-whatsapp" onclick="sendWhatsApp('Hi MR Lexars, I just booked a seat! Ticket: ' + (state.ticket?.id || '') + ', Route: ' + (state.booking?.pickup || '') + ' to ' + (state.booking?.dropoff || '') + '.')" style="flex:1">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" style="vertical-align:middle;margin-right:4px"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/></svg>
+          WhatsApp
+        </button>
+      </div>
+    </div>`;
+  overlay.style.display = 'flex';
+  renderFamilyTracking();
+}
+
+// Patch the original confirm booking to use enhanced flow
+window.confirmBooking = async function() {
+  const name = document.getElementById('pass-name').value.trim();
+  const passport = document.getElementById('pass-passport').value.trim();
+  const phone = document.getElementById('pass-phone').value.trim();
+  if (!name || !state.booking.pickup || !state.booking.dropoff) return;
+  state.booking.fullName = name;
+  state.booking.passport = passport;
+  state.booking.phone = phone;
+  await handleBook();
+};
+
+// ===== INIT OVERRIDES FOR NEW FEATURES =====
+// Patch navigate to render profile when profile tab is clicked
+const _origNav = window.navigate || function(tab) {};
+window.navigate = function(tab) {
+  // Hide all screens
+  document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+  const el = document.getElementById('screen-' + tab);
+  if (el) el.classList.add('active');
+  state.activeTab = tab;
+
+  // Tab indicator
+  const btns = document.querySelectorAll('.tab-btn');
+  btns.forEach(b => b.classList.remove('active'));
+  const activeBtn = document.querySelector('.tab-btn[data-tab="' + tab + '"]');
+  if (activeBtn) {
+    activeBtn.classList.add('active');
+    const indicator = document.getElementById('tab-indicator');
+    if (indicator) {
+      indicator.style.left = activeBtn.offsetLeft + 8 + 'px';
+      indicator.style.width = activeBtn.offsetWidth - 16 + 'px';
+    }
+  }
+
+  // Init map
+  if (tab === 'map') setTimeout(initMap, 200);
+  else closeDriverPanel();
+  // Init profile
+  if (tab === 'profile') renderProfile();
+  // Close any open modals/overlays
+  document.getElementById('modal-overlay').style.display = 'none';
+  document.getElementById('vehicle-popup').style.display = 'none';
+  document.getElementById('sos-overlay').style.display = 'none';
+  state.selectedVehicle = null;
+  // Render driver card on book tab
+  if (tab === 'book') renderDriverCard();
+};
+
+// ===== INIT =====
+document.addEventListener('DOMContentLoaded', function() {
+  autoLogin().then(() => {
+    renderPills();
+    setDate(new Date().toISOString().split('T')[0]);
+    setTimeout(initMap, 500);
+    renderDriverCard();
+  });
+
+  // Passenger form inputs with sanitization
+  ['pass-name','pass-passport','pass-phone'].forEach(id => {
+    document.getElementById(id).addEventListener('input', function() {
+      const map = { 'pass-name': 'fullName', 'pass-passport': 'passport', 'pass-phone': 'phone' };
+      state.booking[map[id]] = sanitize(this.value);
+      updateBookBtn();
+    });
+  });
+
+  // Parcel form inputs with sanitization
+  ['par-name','par-weight','par-value','sender-name','sender-phone','receiver-name','receiver-phone'].forEach(id => {
+    document.getElementById(id).addEventListener('input', function() {
+      const map = {
+        'par-name':'name','par-weight':'weight','par-value':'value',
+        'sender-name':'senderName','sender-phone':'senderPhone',
+        'receiver-name':'receiverName','receiver-phone':'receiverPhone'
+      };
+      state.parcel[map[id]] = sanitize(this.value);
+      updateCustomsText();
+      updateParcelBtn();
+    });
+  });
+});
+</script>
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" crossorigin=""></script>
+<script>
+if ('serviceWorker' in navigator) {
+  navigator.serviceWorker.register('sw.js').catch(() => {});
+}
+</script>
+</body>
+</html>

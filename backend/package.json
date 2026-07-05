@@ -1,0 +1,17 @@
+{
+  "name": "mr-lexar-api",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "node --watch src/index.js",
+    "start": "node src/index.js"
+  },
+  "dependencies": {
+    "cors": "^2.8.5",
+    "express": "^4.21.0",
+    "jsonwebtoken": "^9.0.2",
+    "sql.js": "^1.11.0",
+    "uuid": "^10.0.0"
+  }
+}

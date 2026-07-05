@@ -1,0 +1,11 @@
+services:
+  - type: web
+    name: mr-lexar-api
+    env: node
+    rootDir: backend
+    buildCommand: npm install
+    startCommand: npm start
+    envVars:
+      - key: NODE_VERSION
+        value: 18
+    healthCheckPath: /api/health
